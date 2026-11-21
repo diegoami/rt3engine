@@ -1,0 +1,10 @@
+[package]
+name = "rt3-kit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Railroad Tycoon 3 original-format decoders: PK4 archives, maps, typed data, configuration, saves"
+
+[lints]
+workspace = true

@@ -1,0 +1,10 @@
+[package]
+name = "rt3ctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "RT3Engine command line: installation inventory, format inspection, headless campaigns, MCP server"
+
+[lints]
+workspace = true

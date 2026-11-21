@@ -1,0 +1,42 @@
+# Environment
+
+Reference machine: the owner's Linux box (Ubuntu 24.04) with the GOG
+installation reachable through the Windows mount.
+
+## Original installation
+
+- `RT3_HOME` names the Railroad Tycoon 3 root. Default on this machine:
+  the GOG install at `/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3`
+  (referenced only through `RT3_HOME`; always treated read-only).
+- Verified content (2026-11-21): `RT3.exe` (PE32, 2.3 MB), `Data/` with
+  `2D/3D/Sound` PK4 archives, typed directories (`BuildingTypes`,
+  `CargoTypes`, `EngineTypes`, `TreeTypes`), `Configuration/*.cfg` (binary),
+  `Language/RT3.lng` (INI-like text), `GrayscaleMaps/*.TGA`, `maps/*.gmp`,
+  mp3 music/voice, no user saves yet. Aggregate inventory:
+  [evidence v1](evidence/install-inventory-v1.json) — 1,176 files, ~2.02 GB.
+
+## Toolchain
+
+| Tool | Location / note |
+| --- | --- |
+| Rust | 1.99.1 (`cargo`/`rustc` on PATH); workspace gates: `make test fmt clippy` |
+| GNU make | 4.4.1 at `~/tools/bin/make` (extracted Ubuntu package; no system make on this box). Put `~/tools/bin` on `PATH` |
+| Ghidra | 12.2 at `~/tools/ghidra_12.2_PUBLIC`; run headless via the wrapper `~/tools/bin/ghidra-headless` (sets `JAVA_HOME`) |
+| JDK | Ghidra 12.2 requires JDK **25**: `~/tools/jdk-25.0.5.1+2` (wrapper sets it; JDK 21 at `~/tools/jdk-21.0.13.1+2` is spare) |
+| Wine | **Not installed.** Needed from milestone 4 (oracle). System install requires owner `sudo`; no passwordless sudo on this box |
+| Python | 3.12.3 (helper scripts only; stdlib) |
+
+Installations live in `~/tools` (user-space; `sudo apt` requires the owner).
+Recommended shell setup:
+
+```sh
+export PATH="$HOME/tools/bin:$PATH"
+export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
+```
+
+## Conventions
+
+- Never write into `RT3_HOME`; oracle saves and captures go to a working
+  directory outside it (e.g. `review-tmp/`, gitignored).
+- Evidence regeneration: `make evidence-regen` / `make evidence-check`
+  (self-skip without `RT3_HOME`).

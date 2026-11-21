@@ -1,0 +1,10 @@
+[package]
+name = "engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Native Railroad Tycoon 3 simulation kernel: fixed-tick economy, trains, track, companies, campaigns"
+
+[lints]
+workspace = true

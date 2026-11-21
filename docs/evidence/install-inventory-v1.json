@@ -1,0 +1,284 @@
+{
+  "root": "Railroad Tycoon 3",
+  "total": {
+    "files": 1176,
+    "bytes": 2023435673
+  },
+  "top_level": {
+    "CPUInfo.exe": {
+      "files": 1,
+      "bytes": 49152
+    },
+    "Data": {
+      "files": 790,
+      "bytes": 927576258
+    },
+    "GameuxInstallHelper.dll": {
+      "files": 1,
+      "bytes": 96264
+    },
+    "History.rtf": {
+      "files": 1,
+      "bytes": 87234
+    },
+    "HotKeys": {
+      "files": 1,
+      "bytes": 4199
+    },
+    "Launch Railroad Tycoon 3.lnk": {
+      "files": 1,
+      "bytes": 1972
+    },
+    "Movies": {
+      "files": 6,
+      "bytes": 158068000
+    },
+    "Mss32.dll": {
+      "files": 1,
+      "bytes": 370688
+    },
+    "RT3.exe": {
+      "files": 1,
+      "bytes": 2330624
+    },
+    "Readme.rtf": {
+      "files": 1,
+      "bytes": 35635
+    },
+    "Saved Games": {
+      "files": 0,
+      "bytes": 0
+    },
+    "Screenshots": {
+      "files": 0,
+      "bytes": 0
+    },
+    "Support": {
+      "files": 35,
+      "bytes": 38581
+    },
+    "Support.ico": {
+      "files": 1,
+      "bytes": 62895
+    },
+    "UserSkinningTools": {
+      "files": 248,
+      "bytes": 114659926
+    },
+    "_Extras": {
+      "files": 35,
+      "bytes": 291822753
+    },
+    "__redist": {
+      "files": 0,
+      "bytes": 0
+    },
+    "__support": {
+      "files": 0,
+      "bytes": 0
+    },
+    "binkw32.dll": {
+      "files": 1,
+      "bytes": 375808
+    },
+    "d8tx.dll": {
+      "files": 1,
+      "bytes": 73728
+    },
+    "goggame-1445251062.dll": {
+      "files": 1,
+      "bytes": 289360
+    },
+    "goggame-1445251062.ico": {
+      "files": 1,
+      "bytes": 136441
+    },
+    "goggame-1445251062.info": {
+      "files": 1,
+      "bytes": 892
+    },
+    "goggame-galaxyFileList.ini": {
+      "files": 1,
+      "bytes": 54912
+    },
+    "goglog.ini": {
+      "files": 1,
+      "bytes": 295
+    },
+    "manual.pdf": {
+      "files": 1,
+      "bytes": 819009
+    },
+    "maps": {
+      "files": 41,
+      "bytes": 524571988
+    },
+    "unins000.dat": {
+      "files": 1,
+      "bytes": 314113
+    },
+    "unins000.exe": {
+      "files": 1,
+      "bytes": 1327184
+    },
+    "unins000.msg": {
+      "files": 1,
+      "bytes": 23077
+    },
+    "webcache.zip": {
+      "files": 1,
+      "bytes": 244685
+    }
+  },
+  "extensions": {
+    "asi": {
+      "files": 2,
+      "bytes": 350208
+    },
+    "bat": {
+      "files": 3,
+      "bytes": 131
+    },
+    "bca": {
+      "files": 67,
+      "bytes": 33620
+    },
+    "bik": {
+      "files": 36,
+      "bytes": 550069932
+    },
+    "bty": {
+      "files": 190,
+      "bytes": 7947130
+    },
+    "car": {
+      "files": 145,
+      "bytes": 39440
+    },
+    "cct": {
+      "files": 11,
+      "bytes": 137
+    },
+    "cfg": {
+      "files": 3,
+      "bytes": 3129
+    },
+    "cgo": {
+      "files": 37,
+      "bytes": 925
+    },
+    "css": {
+      "files": 1,
+      "bytes": 544
+    },
+    "cty": {
+      "files": 41,
+      "bytes": 2542
+    },
+    "cur": {
+      "files": 44,
+      "bytes": 78936
+    },
+    "dat": {
+      "files": 3,
+      "bytes": 372057
+    },
+    "dll": {
+      "files": 5,
+      "bytes": 1205848
+    },
+    "exe": {
+      "files": 17,
+      "bytes": 7355927
+    },
+    "flt": {
+      "files": 1,
+      "bytes": 115200
+    },
+    "g": {
+      "files": 5,
+      "bytes": 2552
+    },
+    "gmp": {
+      "files": 43,
+      "bytes": 546341431
+    },
+    "html": {
+      "files": 31,
+      "bytes": 36013
+    },
+    "ico": {
+      "files": 3,
+      "bytes": 200414
+    },
+    "info": {
+      "files": 1,
+      "bytes": 892
+    },
+    "ini": {
+      "files": 2,
+      "bytes": 55207
+    },
+    "js": {
+      "files": 3,
+      "bytes": 2024
+    },
+    "lco": {
+      "files": 66,
+      "bytes": 6006
+    },
+    "lng": {
+      "files": 2,
+      "bytes": 229613
+    },
+    "lnk": {
+      "files": 1,
+      "bytes": 1972
+    },
+    "m3d": {
+      "files": 6,
+      "bytes": 833536
+    },
+    "mp3": {
+      "files": 109,
+      "bytes": 114398103
+    },
+    "msg": {
+      "files": 1,
+      "bytes": 23077
+    },
+    "pdf": {
+      "files": 1,
+      "bytes": 819009
+    },
+    "pk4": {
+      "files": 18,
+      "bytes": 387967670
+    },
+    "rem": {
+      "files": 33,
+      "bytes": 289726170
+    },
+    "rtf": {
+      "files": 3,
+      "bytes": 140954
+    },
+    "scc": {
+      "files": 1,
+      "bytes": 48
+    },
+    "tga": {
+      "files": 234,
+      "bytes": 114817166
+    },
+    "txt": {
+      "files": 6,
+      "bytes": 13425
+    },
+    "zip": {
+      "files": 1,
+      "bytes": 244685
+    }
+  }
+}
+

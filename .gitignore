@@ -1,2 +1,8 @@
 # Subagent worktrees (CLAUDE.md, The process)
 .claude/worktrees/
+
+# Rust build artifacts
+/target/
+
+# Session working areas, oracle captures and generated outputs
+/review-tmp/

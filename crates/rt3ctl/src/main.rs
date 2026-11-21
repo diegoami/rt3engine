@@ -1,0 +1,101 @@
+//! `rt3ctl` — RT3Engine command line.
+//!
+//! Subcommand: `inventory [--path DIR] [--json]` — a metadata-only inventory
+//! of a Railroad Tycoon 3 installation (file counts and byte sizes, never
+//! file contents). It backs the `docs/evidence/install-inventory-v1.json`
+//! artifact and is the milestone-0 bootstrap tool.
+//!
+//! The installation root resolves from `--path`, else `RT3_HOME`. The
+//! installation is treated read-only.
+
+mod inventory;
+
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+const USAGE: &str = "rt3ctl — RT3Engine command line
+
+Usage:
+  rt3ctl inventory [--path <install-root>] [--json]
+  rt3ctl --help
+
+Environment:
+  RT3_HOME   default installation root (see docs/environment.md)
+";
+
+enum Command {
+    Inventory { path: Option<PathBuf>, json: bool },
+    Help,
+}
+
+fn parse_args(args: &[String]) -> Result<Command, String> {
+    let mut it = args.iter();
+    let name = match it.next() {
+        Some(n) => n.as_str(),
+        None => return Ok(Command::Help),
+    };
+    match name {
+        "inventory" => {
+            let mut path = None;
+            let mut json = false;
+            let mut rest = it;
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--json" => json = true,
+                    "--path" => {
+                        let value = rest
+                            .next()
+                            .ok_or_else(|| "--path needs a value".to_string())?;
+                        path = Some(PathBuf::from(value));
+                    }
+                    other => return Err(format!("unknown argument for inventory: {other}")),
+                }
+            }
+            Ok(Command::Inventory { path, json })
+        }
+        "--help" | "help" => Ok(Command::Help),
+        other => Err(format!("unknown command: {other}")),
+    }
+}
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let command = match parse_args(&args) {
+        Ok(command) => command,
+        Err(message) => {
+            eprintln!("rt3ctl: {message}\n\n{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    match command {
+        Command::Help => {
+            print!("{USAGE}");
+            ExitCode::SUCCESS
+        }
+        Command::Inventory { path, json } => {
+            let root = match path.or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from)) {
+                Some(root) => root,
+                None => {
+                    eprintln!(
+                        "rt3ctl: no installation root: pass --path or set RT3_HOME\n\n{USAGE}"
+                    );
+                    return ExitCode::from(2);
+                }
+            };
+            match inventory::inventory(&root) {
+                Ok(report) => {
+                    if json {
+                        println!("{}", report.to_json());
+                    } else {
+                        report.print(&mut std::io::stdout());
+                    }
+                    ExitCode::SUCCESS
+                }
+                Err(message) => {
+                    eprintln!("rt3ctl: inventory of {}: {message}", root.display());
+                    ExitCode::from(1)
+                }
+            }
+        }
+    }
+}

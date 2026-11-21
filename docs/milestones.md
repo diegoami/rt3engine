@@ -1,0 +1,43 @@
+# Milestones
+
+Owner-approved ladder, 2026-11-21. [Mission](mission.md) ·
+[Delivery plan](plan.md) · [Backlog](../BACKLOG.md). Versions attach when a
+milestone's scope freezes; no calendar claims. A milestone closes only on its
+gate — including owner acceptance where named — plus the release process in
+`PRINCIPLES.md` for tagged releases.
+
+| Milestone | Theme | Key tasks | Gate |
+| --- | --- | --- | --- |
+| 0 | **Bootstrap and environment** | Harness adoption; workspace skeleton (`rt3-kit`, `engine`, `rt3ctl`); `rt3ctl inventory` + evidence v1; planning docs; CI | Gates green; owner accepts structure |
+| 1 | **PK4 asset archives** | Ghidra-assisted format RE on `RT3.exe` file IO; Rust reader/list/extract for `Data/{2D,3D,Sound}/*.PK4`; DDS/TGA identification inside packs | Every shipped PK4 listed and entries verifiable; evidence artifact; no assets committed |
+| 2 | **Game data tables and text** | Typed model for `.cty/.bty/.bca/.car/.lco` and txt tables; `RT3.lng`; `Configuration/*.cfg` decode | Typed data loads from the real installation; cross-check against the manual |
+| 3 | **Maps** | `.gmp` decode (terrain, resources, cities/industries); `GrayscaleMaps` relation; 2D render CLI; map inventory | Every shipped map renders; visual sanity vs reference screenshots |
+| 4 | **Save-game decode** | Wine oracle produces saves at known dates; save-diff structure walk; read-only loader; section inventory | Save set loads; field provenance documented |
+| 5 | **Headless economy kernel** | Fixed-tick loop; cargo supply/demand/prices on loaded maps; seeded determinism; month-by-month dumps; oracle comparisons where measurable | Deterministic multi-year run on ≥2 maps; divergence documented |
+| 6 | **Trains, track and commands** | Track graph; movement/physics; consists and schedules; headless player commands with order log and checkpoints; AI competitor v0 | Scripted company reaches cash flow; replay exact |
+| 7 | **Observer** | Browser observer over live headless runs: map, trains, economy panels; run controls | Owner watches a full campaign run |
+| 8 | **Original-save entry** | Boot a bounded original `.sav` into the native sim; capability/gaps report | Bounded save continues; differences visible and documented |
+| 9 | **Playable client, first slice** | Rendering-route design package and **owner decision** (decision 0001); interactive track laying and trains on an original map; checkpoint save/resume | Owner plays and saves/resumes on the actual client |
+| 10 | **Campaign breadth** | Stations/buildings; industry upgrades; stock market; competitor depth; campaign objectives | One shipped scenario playable end-to-end |
+| 11 | **MCP stage 1 — headless read-only** | `rt3ctl mcp`: installation/map/save inspection, headless campaign runs, observer queries; bounded roots; read-only filesystem; byte-identical to CLI | An external assistant inspects and runs a campaign via MCP |
+| 12 | **MCP stages 2–3** | Client-attached advisory (filtered view, pending decisions); headless experimental agent play (validated, recorded orders) | Advisory survives reconnect; agent runs replay without the agent |
+| 13 | **Original save write** | Export `.sav` from native state | Original (oracle) loads/re-saves our output; differential evidence retained |
+| 14 | **Enhanced playing package** | Opt-in QoL: overlays (cargo flow, profitability), schedule aids, presentation/settings, recording/annotations | Owner acceptance; faithful defaults preserved |
+| 15+ | **Authoring and beyond** | Map/scenario inspection → lint/dry-run → editing; AI plugins/tournaments; original-fidelity program | scoped per package when opened |
+
+## Selection and completion rules
+
+1. Work proceeds milestone by milestone in the order above unless the owner
+   re-orders; a milestone opens only when its predecessor's gate is met or
+   the owner waives it explicitly.
+2. Versions are assigned when a milestone's scope freezes; the tag points at
+   the exact reviewed SHA. The owner launches every milestone review.
+3. Milestone 9's rendering-route decision (native 3D vs 2D-first; browser
+   play as stretch) is an explicit owner gate recorded as a decision; the
+   engine stays headless-first until then.
+4. MCP stage 1 (milestone 11) may be pulled earlier by owner decision; until
+   then it stays after campaign breadth so tools expose real runs.
+5. Enhancements (14+) never block or replace faithful-baseline work, and are
+   always opt-in.
+6. Umbrella programs (authoring, fidelity) stay open across slices; a
+   bounded story closes on its own evidence.
