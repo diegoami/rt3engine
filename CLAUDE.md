@@ -44,7 +44,7 @@ the bootstrap applies as written there — one review, not two stages.
 - **roles:** recorded before the mode; the mode is the implementer's tool's.
   - **implementer:** OpenCode, model `zai-coding-plan/glm-5.3`. The
     project works in OpenCode mode (`AGENTS.md`).
-  - **reviewer of each change:** opencode/gpt-5.6-luna#high, as a subagent.
+  - **reviewer of each change:** `opencode-go/gpt-6-luna#high`, as a subagent.
   - **reviewer of releases:** a model family that implemented none of the
     candidate; the owner picks one at each milestone (`PRINCIPLES.md`,
     *Milestones*).

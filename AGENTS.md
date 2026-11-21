@@ -11,7 +11,7 @@ This file adds the OpenCode-specific process and nothing else.
 | role | who |
 |---|---|
 | implementer | `zai-coding-plan/glm-5.3` |
-| reviewer | opencode/gpt-5.6-luna#high, as a subagent |
+| reviewer | `opencode-go/gpt-6-luna#high`, as a subagent |
 
 - The **implementer** writes the design, the code and the tests, and answers
   the review in the record, signed `— Implementer (zai-coding-plan/glm-5.3)`.
