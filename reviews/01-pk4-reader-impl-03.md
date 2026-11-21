@@ -44,3 +44,26 @@ No blocking findings remain.
 
 — GPT-6.2 Sol (gpt-6.2-sol#low), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `ab827b5` (owner-authorized delegated merge,
+2026-11-22). Done-when items and their evidence:
+
+- Issue #1 (format): `docs/evidence/pk4-format-v1.md` documents the PK4
+  layout with Ghidra provenance (loader `0x0053b090`, lookup `0x0053b390`,
+  seek `0x0053bd40`); independent byte validation of all 18 shipped
+  archives; open questions recorded (hash algorithm, legacy versions, flag
+  byte).
+- Issue #2 (reader): `rt3-kit::pk4` open/parse/find/`extract`-to-writer
+  with bounds validation; install-backed test extracts every shipped entry
+  (18 archives, 8,375 entries) with byte-count assertions; `rt3ctl pk4
+  list` CLI; aggregate evidence `pk4-archives-v1.json` checked by
+  `tools/evidence.sh` (drift and producer-failure paths verified).
+- Claim level achieved: **parse** (read side). No simulation, authoring or
+  fidelity claim.
+
+Post-landing follow-ups stay open: issue #3 (prior-art breadth), PK4
+name→hash algorithm (needed only for authoring, milestone 13).
+
+— Implementer (zai-coding-plan/glm-5.3)
