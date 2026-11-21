@@ -25,7 +25,7 @@
 //! string hashes); it is not needed to read archives, only to author them.
 
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 /// Format version this reader implements.
@@ -257,21 +257,57 @@ impl Pk4Archive {
     }
 
     /// Reads an entry's payload into a vector.
+    /// Reads an entry's payload into a vector (convenience wrapper around
+    /// [`Pk4Archive::extract`]).
     pub fn read(&self, entry: &Entry) -> Result<Vec<u8>, Pk4Error> {
+        let mut buffer = Vec::with_capacity(entry.size as usize);
+        self.extract(entry, &mut buffer)?;
+        Ok(buffer)
+    }
+
+    /// Streams an entry's payload to a caller-supplied writer and returns
+    /// the number of bytes written (the entry's declared size on success).
+    ///
+    /// This is the primary extraction path: the installation is only read,
+    /// and nothing is copied anywhere unless the caller writes it.
+    pub fn extract(&self, entry: &Entry, writer: &mut impl Write) -> Result<u64, Pk4Error> {
+        use std::io::Seek;
         let mut file =
             fs::File::open(&self.path).map_err(|e| Pk4Error::Io(self.path.clone(), e))?;
-        read_payload(&mut file, self.payload_offset(entry), entry.size)
-            .map_err(|e| Pk4Error::Io(self.path.clone(), e))
+        file.seek(std::io::SeekFrom::Start(self.payload_offset(entry)))
+            .map_err(|e| Pk4Error::Io(self.path.clone(), e))?;
+        let mut remaining = entry.size as u64;
+        let mut chunk = [0u8; 64 * 1024];
+        while remaining > 0 {
+            let want = remaining.min(chunk.len() as u64) as usize;
+            file.read_exact(&mut chunk[..want])
+                .map_err(|e| Pk4Error::Io(self.path.clone(), e))?;
+            writer
+                .write_all(&chunk[..want])
+                .map_err(|e| Pk4Error::Io(self.path.clone(), e))?;
+            remaining -= want as u64;
+        }
+        Ok(entry.size as u64)
     }
 }
 
-/// Reads `size` bytes starting at `offset` from an already-opened file.
-fn read_payload(file: &mut fs::File, offset: u64, size: u32) -> io::Result<Vec<u8>> {
-    use std::io::Seek;
-    file.seek(std::io::SeekFrom::Start(offset))?;
-    let mut buffer = vec![0u8; size as usize];
-    file.read_exact(&mut buffer)?;
-    Ok(buffer)
+/// Discards payloads while counting the bytes written; used by tests to
+/// exercise extraction without copying game data anywhere.
+#[cfg(test)]
+pub(crate) struct CountingWriter {
+    pub bytes: u64,
+}
+
+#[cfg(test)]
+impl Write for CountingWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.bytes += buf.len() as u64;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -407,6 +443,23 @@ mod tests {
                     continue;
                 }
                 let archive = Pk4Archive::open(&path).unwrap_or_else(|e| panic!("{e}"));
+                // Exercise extraction of every entry through a counting
+                // writer: offsets and sizes must be readable end to end,
+                // without copying game data anywhere.
+                for entry in archive.entries() {
+                    let mut sink = CountingWriter { bytes: 0 };
+                    let written = archive
+                        .extract(entry, &mut sink)
+                        .unwrap_or_else(|e| panic!("{e}"));
+                    assert_eq!(
+                        written,
+                        entry.size as u64,
+                        "{}: {} byte count mismatch",
+                        archive.path().display(),
+                        entry.name
+                    );
+                    assert_eq!(sink.bytes, entry.size as u64);
+                }
                 entries += archive.entries().len();
                 found += 1;
             }

@@ -115,17 +115,22 @@ pub fn run(list: Pk4List) -> ExitCode {
     let archives: Vec<PathBuf> = if listing_mode {
         list.archives.clone()
     } else {
-        match list
+        let root = list
             .path
             .clone()
             .or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from))
-        {
-            Some(root) => shipped_archives(&root),
-            None => {
+            .unwrap_or_else(|| {
                 eprintln!("rt3ctl: pk4 list needs --archive, --path or RT3_HOME");
-                return ExitCode::from(2);
-            }
+                std::process::exit(2);
+            });
+        if !root.is_dir() {
+            eprintln!(
+                "rt3ctl: installation root is not a directory: {}",
+                root.display()
+            );
+            return ExitCode::from(2);
         }
+        shipped_archives(&root)
     };
 
     let mut summaries = Vec::new();
@@ -165,11 +170,35 @@ pub fn run(list: Pk4List) -> ExitCode {
     let mut out = std::io::stdout();
 
     if listing_mode {
-        // Human listing of the requested archives' entries.
-        for (name, archive) in &opened {
-            let _ = writeln!(out, "{name}: {} entries", archive.entries().len());
-            for entry in archive.entries() {
-                let _ = writeln!(out, "  {:<40} {:>10} bytes", entry.name, entry.size);
+        // Listing of the requested archives' entries, honoring --json.
+        if list.json {
+            let mut out = String::from("{\n  \"archives\": [\n");
+            for (i, (name, archive)) in opened.iter().enumerate() {
+                let comma = if i + 1 < opened.len() { "," } else { "" };
+                out.push_str(&format!(
+                    "    {{\n      \"archive\": {},\n      \"version\": {},\n      \"entries\": [\n",
+                    json_string(name),
+                    archive.version()
+                ));
+                let entries = archive.entries();
+                for (j, entry) in entries.iter().enumerate() {
+                    let comma = if j + 1 < entries.len() { "," } else { "" };
+                    out.push_str(&format!(
+                        "        {{\n          \"name\": {},\n          \"size\": {}\n        }}{comma}\n",
+                        json_string(&entry.name),
+                        entry.size
+                    ));
+                }
+                out.push_str(&format!("      ]\n    }}{comma}\n"));
+            }
+            out.push_str("  ]\n}\n");
+            print!("{out}");
+        } else {
+            for (name, archive) in &opened {
+                let _ = writeln!(out, "{name}: {} entries", archive.entries().len());
+                for entry in archive.entries() {
+                    let _ = writeln!(out, "  {:<40} {:>10} bytes", entry.name, entry.size);
+                }
             }
         }
         return ExitCode::SUCCESS;
