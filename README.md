@@ -26,11 +26,13 @@ staged MCP agent interface · enhanced playing (opt-in QoL).
 
 ## Status
 
-Milestone 0 (bootstrap), 2026-11-21: harness process adopted, Rust workspace
-skeleton (`rt3-kit`, `engine`, `rt3ctl`), metadata-only installation
-inventory with its [evidence artifact](docs/evidence/README.md), CI. No
-format decoding, simulation or client exists yet. Next: milestone 1 — PK4
-asset archives ([milestones](docs/milestones.md)).
+Milestone 1 (PK4 asset archives) is implemented pending review: the format is
+decoded from `RT3.exe` ([pk4-format-v1.md](docs/evidence/pk4-format-v1.md)),
+`rt3-kit::pk4` reads all 18 shipped archives (8,375 entries, raw payloads),
+and `rt3ctl pk4 list` produces the aggregate evidence artifact. Milestone 0
+(bootstrap) is complete: harness process, workspace skeleton, installation
+inventory, CI. No simulation or client exists yet; ladder and next steps in
+[milestones](docs/milestones.md).
 
 ## Development
 

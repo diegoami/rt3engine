@@ -19,13 +19,16 @@ clippy:
 evidence-regen:
 	@if [ -z "$(RT3_HOME)" ]; then echo "RT3_HOME unset; skipping evidence-regen"; else \
 		$(CARGO) run -q -p rt3ctl -- inventory --json > docs/evidence/install-inventory-v1.json; \
-		echo "regenerated docs/evidence/install-inventory-v1.json"; \
+		$(CARGO) run -q -p rt3ctl -- pk4 list --json > docs/evidence/pk4-archives-v1.json; \
+		echo "regenerated docs/evidence artifacts"; \
 	fi
 
 evidence-check:
 	@if [ -z "$(RT3_HOME)" ]; then echo "RT3_HOME unset; skipping evidence-check"; else \
 		$(CARGO) run -q -p rt3ctl -- inventory --json | diff -q - docs/evidence/install-inventory-v1.json \
-		|| (echo "evidence drift: run make evidence-regen"; exit 1); \
+		|| (echo "evidence drift: install-inventory-v1.json"; exit 1); \
+		$(CARGO) run -q -p rt3ctl -- pk4 list --json | diff -q - docs/evidence/pk4-archives-v1.json \
+		|| (echo "evidence drift: pk4-archives-v1.json"; exit 1); \
 	fi
 
 # Full local suite: Rust workspace + evidence verification.

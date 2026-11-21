@@ -42,7 +42,7 @@ the bootstrap applies as written there — one review, not two stages.
 - **product:** rt3engine — An open, native stand-in engine for Railroad Tycoon 3 that plays the original game from the user's own installation assets, with headless simulation, observers, save/map compatibility, and an MCP interface for AI-assisted play.
 - **premise:** product — the project's content is the deliverable.
 - **roles:** recorded before the mode; the mode is the implementer's tool's.
-  - **implementer:** OpenCode, model `opencode/deepseek-v4.1-flash`. The
+  - **implementer:** OpenCode, model `zai-coding-plan/glm-5.3`. The
     project works in OpenCode mode (`AGENTS.md`).
   - **reviewer of each change:** opencode/gpt-5.6-luna#high, as a subagent.
   - **reviewer of releases:** a model family that implemented none of the

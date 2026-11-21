@@ -24,11 +24,14 @@ compensates for absent engine mechanics.
 
 ## Near-term selection
 
-1. Milestone 0 (bootstrap) is complete pending owner acceptance of this
-   structure.
-2. Next: **milestone 1 — PK4 asset archives**: Ghidra RE of the archive
-   format in `RT3.exe`, Rust reader in `rt3-kit`, per-archive evidence.
-3. Then milestone 2 (typed data + language + config) in the same stream.
+1. Milestone 0 (bootstrap) is complete and accepted; CI is green.
+2. Milestone 1 (PK4 asset archives) is **implemented on branch `m1/pk4-re`**
+   pending review/merge: format decoded from `RT3.exe` (see
+   `docs/evidence/pk4-format-v1.md`), reader in `rt3-kit::pk4`, `rt3ctl pk4
+   list` with aggregate evidence. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
+   remains open.
+3. Next: milestone 2 — typed data tables (`.cty/.bty/.bca/.car/.lco`),
+   `RT3.lng`, `Configuration/*.cfg`.
 
 ## Story contract
 

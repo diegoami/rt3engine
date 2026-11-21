@@ -7,8 +7,7 @@
 //! | Module (planned) | Format | Source |
 //! | --- | --- | --- |
 //! | `pk4` | `Data/{2D,3D,Sound}/*.PK4` packed asset archives | milestone 1 |
-//! | `typed` | `CargoTypes/*.cty`, `BuildingTypes/*.bty`+`.bca`, `EngineTypes/*.car`+`.lco`, `TreeTypes.txt`, `AirplaneTypes.txt` | milestone 2 |
-//! | `config` | `Data/Configuration/*.cfg` | milestone 2 |
+//! | `typed` | `CargoTypes/*.cty`, `BuildingTypes/*.bty`+`.bca`, `EngineTypes/*.car`+`.lco`, `TreeTypes.txt`, `AirplaneTypes.txt` | milestone 2 |//! | `config` | `Data/Configuration/*.cfg` | milestone 2 |
 //! | `language` | `Data/Language/RT3.lng` | milestone 2 |
 //! | `map` | `maps/*.gmp`, `Data/GrayscaleMaps/*.TGA` | milestone 3 |
 //! | `save` | `Saved Games/*.sav` | milestone 4 |
@@ -18,5 +17,7 @@
 //! ever committed; tests use fixtures or the installation via `RT3_HOME` and
 //! self-skip when it is unset.
 //!
-//! Status: placeholder at milestone 0 (bootstrap); the first decoder lands
-//! with milestone 1.
+//! Status: milestone 1 — `pk4` (PK4 asset archives) is implemented; the other
+//! families land with their milestones.
+
+pub mod pk4;
