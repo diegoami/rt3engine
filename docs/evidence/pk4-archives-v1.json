@@ -1,0 +1,135 @@
+{
+  "archives": [
+    {
+      "archive": "RT3_CoastToCoast.PK4",
+      "version": 1003,
+      "entries": 39,
+      "payload_bytes": 827864,
+      "table_bytes": 2894
+    },
+    {
+      "archive": "rt3_2DDS.PK4",
+      "version": 1003,
+      "entries": 1981,
+      "payload_bytes": 125998944,
+      "table_bytes": 146602
+    },
+    {
+      "archive": "rt3_2IMB.PK4",
+      "version": 1003,
+      "entries": 598,
+      "payload_bytes": 3513665,
+      "table_bytes": 44260
+    },
+    {
+      "archive": "rt3_2TGA.PK4",
+      "version": 1003,
+      "entries": 1,
+      "payload_bytes": 2097196,
+      "table_bytes": 82
+    },
+    {
+      "archive": "rt3_2WIN.PK4",
+      "version": 1003,
+      "entries": 46,
+      "payload_bytes": 376965,
+      "table_bytes": 3412
+    },
+    {
+      "archive": "rt3_3DPF.PK4",
+      "version": 1003,
+      "entries": 2834,
+      "payload_bytes": 21826828,
+      "table_bytes": 209724
+    },
+    {
+      "archive": "rt3_3DPW.PK4",
+      "version": 1003,
+      "entries": 401,
+      "payload_bytes": 1547284,
+      "table_bytes": 29682
+    },
+    {
+      "archive": "rt3_DDSF.PK4",
+      "version": 1003,
+      "entries": 1464,
+      "payload_bytes": 171521280,
+      "table_bytes": 108344
+    },
+    {
+      "archive": "rt3_DDSW.PK4",
+      "version": 1003,
+      "entries": 295,
+      "payload_bytes": 10234576,
+      "table_bytes": 21838
+    },
+    {
+      "archive": "rt3_Expansion.PK4",
+      "version": 1003,
+      "entries": 288,
+      "payload_bytes": 8737564,
+      "table_bytes": 21320
+    },
+    {
+      "archive": "rt3_TGAF.PK4",
+      "version": 1003,
+      "entries": 0,
+      "payload_bytes": 0,
+      "table_bytes": 8
+    },
+    {
+      "archive": "rt3_TGAW.PK4",
+      "version": 1003,
+      "entries": 231,
+      "payload_bytes": 17461060,
+      "table_bytes": 17102
+    },
+    {
+      "archive": "RT3SoundBuildings.PK4",
+      "version": 1003,
+      "entries": 79,
+      "payload_bytes": 11846044,
+      "table_bytes": 5854
+    },
+    {
+      "archive": "RT3SoundInterface.PK4",
+      "version": 1003,
+      "entries": 54,
+      "payload_bytes": 1616622,
+      "table_bytes": 4004
+    },
+    {
+      "archive": "RT3SoundNature.PK4",
+      "version": 1003,
+      "entries": 24,
+      "payload_bytes": 3589104,
+      "table_bytes": 1784
+    },
+    {
+      "archive": "RT3SoundTrains.PK4",
+      "version": 1003,
+      "entries": 23,
+      "payload_bytes": 2706370,
+      "table_bytes": 1710
+    },
+    {
+      "archive": "RT3SoundWeather.PK4",
+      "version": 1003,
+      "entries": 7,
+      "payload_bytes": 2078954,
+      "table_bytes": 526
+    },
+    {
+      "archive": "RT3SoundWorldObjects.PK4",
+      "version": 1003,
+      "entries": 10,
+      "payload_bytes": 1367456,
+      "table_bytes": 748
+    }
+  ],
+  "total": {
+    "archives": 18,
+    "entries": 8375,
+    "payload_bytes": 387347776
+  }
+}

@@ -6,5 +6,8 @@ license.workspace = true
 repository.workspace = true
 description = "RT3Engine command line: installation inventory, format inspection, headless campaigns, MCP server"
 
+[dependencies]
+rt3-kit = { path = "../rt3-kit" }
+
 [lints]
 workspace = true

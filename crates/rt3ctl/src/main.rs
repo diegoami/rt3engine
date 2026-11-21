@@ -1,14 +1,21 @@
 //! `rt3ctl` — RT3Engine command line.
 //!
-//! Subcommand: `inventory [--path DIR] [--json]` — a metadata-only inventory
-//! of a Railroad Tycoon 3 installation (file counts and byte sizes, never
-//! file contents). It backs the `docs/evidence/install-inventory-v1.json`
-//! artifact and is the milestone-0 bootstrap tool.
+//! Subcommands:
+//!
+//! - `inventory [--path DIR] [--json]` — a metadata-only inventory of a
+//!   Railroad Tycoon 3 installation (file counts and byte sizes, never file
+//!   contents). It backs the `docs/evidence/install-inventory-v1.json`
+//!   artifact and is the milestone-0 bootstrap tool.
+//! - `pk4 list [--path DIR] [--archive FILE]... [--json]` — parse PK4 asset
+//!   archives and summarize them; with `--archive` prints that archive's
+//!   entries instead of the aggregate summary. Backs
+//!   `docs/evidence/pk4-archives-v1.json`.
 //!
 //! The installation root resolves from `--path`, else `RT3_HOME`. The
 //! installation is treated read-only.
 
 mod inventory;
+mod pk4_cmd;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -17,6 +24,7 @@ const USAGE: &str = "rt3ctl — RT3Engine command line
 
 Usage:
   rt3ctl inventory [--path <install-root>] [--json]
+  rt3ctl pk4 list [--path <install-root>] [--archive <file>]... [--json]
   rt3ctl --help
 
 Environment:
@@ -25,6 +33,7 @@ Environment:
 
 enum Command {
     Inventory { path: Option<PathBuf>, json: bool },
+    Pk4List(pk4_cmd::Pk4List),
     Help,
 }
 
@@ -53,9 +62,18 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             }
             Ok(Command::Inventory { path, json })
         }
+        "pk4" => match it.next().map(String::as_str) {
+            Some("list") => Ok(Command::Pk4List(pk4_cmd::parse(it))),
+            Some("--help") | Some("help") | None => Err("pk4 needs a subcommand: list".to_string()),
+            Some(other) => Err(format!("unknown pk4 subcommand: {other}")),
+        },
         "--help" | "help" => Ok(Command::Help),
         other => Err(format!("unknown command: {other}")),
     }
+}
+
+fn install_root(explicit: Option<PathBuf>) -> Option<PathBuf> {
+    explicit.or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from))
 }
 
 fn main() -> ExitCode {
@@ -73,14 +91,9 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Inventory { path, json } => {
-            let root = match path.or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from)) {
-                Some(root) => root,
-                None => {
-                    eprintln!(
-                        "rt3ctl: no installation root: pass --path or set RT3_HOME\n\n{USAGE}"
-                    );
-                    return ExitCode::from(2);
-                }
+            let Some(root) = install_root(path) else {
+                eprintln!("rt3ctl: no installation root: pass --path or set RT3_HOME\n\n{USAGE}");
+                return ExitCode::from(2);
             };
             match inventory::inventory(&root) {
                 Ok(report) => {
@@ -97,5 +110,6 @@ fn main() -> ExitCode {
                 }
             }
         }
+        Command::Pk4List(list) => pk4_cmd::run(list),
     }
 }

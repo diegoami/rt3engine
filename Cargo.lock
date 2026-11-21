@@ -13,3 +13,6 @@ version = "0.1.0"
 [[package]]
 name = "rt3ctl"
 version = "0.1.0"
+dependencies = [
+ "rt3-kit",
+]
