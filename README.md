@@ -26,13 +26,14 @@ staged MCP agent interface · enhanced playing (opt-in QoL).
 
 ## Status
 
-Milestone 1 (PK4 asset archives) is implemented pending review: the format is
-decoded from `RT3.exe` ([pk4-format-v1.md](docs/evidence/pk4-format-v1.md)),
-`rt3-kit::pk4` reads all 18 shipped archives (8,375 entries, raw payloads),
-and `rt3ctl pk4 list` produces the aggregate evidence artifact. Milestone 0
-(bootstrap) is complete: harness process, workspace skeleton, installation
-inventory, CI. No simulation or client exists yet; ladder and next steps in
-[milestones](docs/milestones.md).
+Milestone 1 (PK4 asset archives) is **released to main** (PR #4, merge
+`ab827b5`, two independent AGREE reviews): the format is decoded from
+`RT3.exe` ([pk4-format-v1.md](docs/evidence/pk4-format-v1.md)),
+`rt3-kit::pk4` reads and extracts all 18 shipped archives (8,375 entries,
+raw payloads), and `rt3ctl pk4 list` produces the aggregate evidence
+artifact. Current work: milestone 2 — typed data tables (`.cty/.bty/.bca/
+.car/.lco`), `RT3.lng`, `Configuration/*.cfg`. Simulation and clients come
+later; ladder and next steps in [milestones](docs/milestones.md).
 
 ## Development
 
