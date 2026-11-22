@@ -10,6 +10,7 @@
 //! | `typed` | `CargoTypes/*.cty`, `BuildingTypes/*.bty`+`.bca`, `EngineTypes/*.car`+`.lco`, `TreeTypes.txt`, `AirplaneTypes.txt` | milestone 2 |//! | `config` | `Data/Configuration/*.cfg` | milestone 2 |
 //! | `language` | `Data/Language/RT3.lng` | milestone 2 |
 //! | `map` | `maps/*.gmp`, `Data/GrayscaleMaps/*.TGA` | milestone 3 |
+//! | `terrain` | terrain heightfields inside `maps/*.gmp` | milestone 3b |
 //! | `save` | `Saved Games/*.sav` | milestone 4 |
 //!
 //! Every format claim in this crate must be backed by an artifact under
@@ -18,9 +19,11 @@
 //! self-skip when it is unset.
 //!
 //! Status: milestone 1 — `pk4` (PK4 asset archives); milestone 2 — `typed`
-//! (typed game-data records and text/config). The remaining families land
-//! with their milestones.
+//! (typed game-data records and text/config); milestone 3 — `map`
+//! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield). The
+//! remaining families land with their milestones.
 
 pub mod map;
 pub mod pk4;
+pub mod terrain;
 pub mod typed;

@@ -33,13 +33,20 @@ fi
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 2
 cd "$repo_root" || exit 2
 
-# process TARGET PRODUCER-ARGS...
+# process [--release] TARGET PRODUCER-ARGS...
 #   0 = ok, 1 = drift (check mode), 2 = producer or environment failure.
+#   --release builds the producer with --release (the terrain scan walks
+#   every map with a validating scanner and is far too slow in debug).
 process() {
+    release=""
+    if [ "${1:-}" = "--release" ]; then
+        release="--release"
+        shift
+    fi
     target=$1
     shift
     tmp=$(mktemp "${target}.tmp.XXXXXX") || return 2
-    if ! "$CARGO" run -q -p rt3ctl -- "$@" > "$tmp"; then
+    if ! "$CARGO" run -q $release -p rt3ctl -- "$@" > "$tmp"; then
         echo "evidence producer failed: rt3ctl $*" >&2
         rm -f "$tmp"
         return 2
@@ -65,4 +72,5 @@ process docs/evidence/install-inventory-v1.json inventory --json || status=$?
 process docs/evidence/pk4-archives-v1.json pk4 list --json || status=$?
 process docs/evidence/typed-tables-v1.json typed list --json || status=$?
 process docs/evidence/maps-inventory-v1.json map list --json || status=$?
+process --release docs/evidence/terrain-scan-v1.json map terrain --all --json || status=$?
 exit "$status"

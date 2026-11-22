@@ -52,9 +52,10 @@ map-specific tail (terrain + objects; grammar open — see below)
 
 ## Open
 
-- The map-specific tail: terrain encoding (consumed by an incremental
-  decoder — no single large raw read exists), objects, cities/industries,
-  resources, events. The section handlers' own reads must be mapped.
+- The map-specific tail: terrain encoding — step 1 (the coarse
+  heightfield) is proven, see [gmp-terrain-v1.md](gmp-terrain-v1.md);
+  objects, cities/industries, resources, events remain. The section
+  handlers' own reads must be mapped.
 - Legacy versions 9609/9610 layouts.
 - Semantics of the extent/config words.
 

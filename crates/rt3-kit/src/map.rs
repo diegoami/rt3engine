@@ -13,11 +13,12 @@
 //! map-specific tail follows (terrain + objects; grammar open)
 //! ```
 //!
-//! The loader (`RT3.exe` `0x00444dd0`) reads this record via a cherry-picked
-//! skip/raw sequence (`0x00531340` skips 4 bytes; `0x00531030` reads raw
-//! bytes). The tail — including the compressed terrain consumed by an
-//! incremental decoder — is not yet decoded; the reader exposes its offset
-//! and length only.
+//! The save-side framing is proven (`RT3.exe` `0x00444dd0` writes this
+//! record via `0x00531340` tag writes and a `0x00531030` raw write of
+//! 20,268 bytes; the reader mirrors it). The tail — including the
+//! terrain heights (`rt3-kit::terrain`, coarse grid proven) and objects —
+//! is only partially decoded; the reader exposes its offset and length
+//! only.
 
 use std::fs;
 use std::path::{Path, PathBuf};

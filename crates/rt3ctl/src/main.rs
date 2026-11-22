@@ -29,6 +29,7 @@ Usage:
   rt3ctl pk4 list [--path <install-root>] [--archive <file>]... [--json]
   rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl map list [--path <install-root>] [--json]
+  rt3ctl map terrain <name> [--path <install-root>]
   rt3ctl --help
 
 Environment:
@@ -40,6 +41,7 @@ enum Command {
     Pk4List(pk4_cmd::Pk4List),
     TypedList(typed_cmd::TypedList),
     MapList(map_cmd::MapList),
+    MapTerrain(map_cmd::MapTerrain),
     Help,
 }
 
@@ -75,7 +77,52 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
         },
         "map" => match it.next().map(String::as_str) {
             Some("list") => Ok(Command::MapList(map_cmd::parse(it))),
-            Some("--help") | Some("help") | None => Err("map needs a subcommand: list".to_string()),
+            Some("terrain") => {
+                let mut path = None;
+                let mut name: Option<String> = None;
+                let mut all = false;
+                let mut json = false;
+                while let Some(arg) = it.next() {
+                    match arg.as_str() {
+                        "--path" => {
+                            if let Some(value) = it.next() {
+                                path = Some(PathBuf::from(value));
+                            } else {
+                                return Err("map terrain: --path needs a value".to_string());
+                            }
+                        }
+                        "--all" => all = true,
+                        "--json" => json = true,
+                        other if other.starts_with("--") => {
+                            return Err(format!("map terrain: unknown option {other}"));
+                        }
+                        other => {
+                            if name.is_some() {
+                                return Err(format!(
+                                    "map terrain: unexpected extra argument {other}"
+                                ));
+                            }
+                            name = Some(other.to_string());
+                        }
+                    }
+                }
+                if name.is_some() && all {
+                    return Err("map terrain: --all takes no map name".to_string());
+                }
+                if all || name.is_some() {
+                    Ok(Command::MapTerrain(map_cmd::MapTerrain {
+                        path,
+                        name,
+                        all,
+                        json,
+                    }))
+                } else {
+                    Err("map terrain needs a map name or --all".to_string())
+                }
+            }
+            Some("--help") | Some("help") | None => {
+                Err("map needs a subcommand: list, terrain <name>".to_string())
+            }
             Some(other) => Err(format!("unknown map subcommand: {other}")),
         },
         "typed" => match it.next().map(String::as_str) {
@@ -131,5 +178,6 @@ fn main() -> ExitCode {
         Command::Pk4List(list) => pk4_cmd::run(list),
         Command::TypedList(list) => typed_cmd::run(list),
         Command::MapList(list) => map_cmd::run(list),
+        Command::MapTerrain(t) => map_cmd::run_terrain(t),
     }
 }
