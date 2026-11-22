@@ -64,4 +64,5 @@ status=0
 process docs/evidence/install-inventory-v1.json inventory --json || status=$?
 process docs/evidence/pk4-archives-v1.json pk4 list --json || status=$?
 process docs/evidence/typed-tables-v1.json typed list --json || status=$?
+process docs/evidence/maps-inventory-v1.json map list --json || status=$?
 exit "$status"
