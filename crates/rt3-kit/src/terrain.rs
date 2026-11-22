@@ -1,20 +1,24 @@
 //! Coarse terrain heightfield extraction from `.gmp` maps (milestone 3b,
 //! step 1 — see `docs/evidence/gmp-terrain-v1.md`).
 //!
-//! Proven so far (claim level **decode — coarse grid only**):
+//! Proven so far (claim level **decode — one verified map**):
 //!
 //! ```text
-//! after the prelude, the file holds uncompressed f32 heights in
-//! 1032-byte rows: 257 height cells + 1 trailing cell (semantics open),
-//! forming a 257×257 corner grid over the 256×256 terrain lattice
-//! (the 9-dim header of the tagged terrain section reads
-//! 64,64,64,64,256,256,1024,1024,0 on every map checked so far).
+//! on Crossing the Alps (dims header lattice 256×256), the coarse
+//! heights are stored uncompressed as f32 in 1032-byte rows: 257
+//! height cells + 1 trailing cell (semantics open), forming the
+//! 257×257 corner grid over the 256×256 terrain lattice.
 //! ```
 //!
-//! Water is `0.0` in some maps and `NaN` in others; both are accepted.
-//! The scan validates candidates by value range, land fraction and
-//! row-to-row smoothness, so all-`0x00`/all-`0xFF` filler (which reads
-//! as `0.0`/NaN floats) is rejected.
+//! The dims header varies per map (13 of 40 shipped maps carry a
+//! detectable `0x2ee2` header — see `read_dims`); on lattices wider
+//! than 256 this module's fixed window geometry is not a rectilinear
+//! subwindow of the parent grid, so scan hits there are candidates,
+//! not verified decodes (the CLI and evidence artifact carry the
+//! status). Water is `0.0` in some maps and `NaN` in others; both are
+//! accepted. The scan validates candidates by value range, land
+//! fraction and row-to-row smoothness, so all-`0x00`/all-`0xFF` filler
+//! (which reads as `0.0`/NaN floats) is rejected.
 
 /// Height rows in the coarse grid.
 pub const ROWS: usize = 257;
@@ -277,68 +281,49 @@ fn extract(bytes: &[u8], off: usize) -> Option<HeightGrid> {
 
 /// Scans for validated coarse grids, 4-byte aligned, from `from`.
 ///
-/// Stepping: garbage rejects within a read or two of the probe (advance
-/// 4); windows with no land anywhere in the probe's whole-grid spread
-/// cannot pass validation's land gate, so they advance cheaply. Only
-/// land-bearing windows pay for full validation — the probe must cover
-/// all rows, or sea-opening grids (water above, land below) would never
-/// be examined at their true start.
+/// The probe only ever rejects: its sample positions are a subset of
+/// the validator's (both start at the window origin; the probe steps
+/// 32, the validator 4), so a probe range violation guarantees
+/// validation failure. No accept-side shortcut is taken — a window the
+/// validator would accept is always validated (see the regression test
+/// for a land layout the probe's lattice cannot see).
 pub fn scan_all(bytes: &[u8], from: usize) -> Vec<HeightGrid> {
     let mut out = Vec::new();
     let mut off = from & !3;
     while off + GRID_BYTES <= bytes.len() {
-        match quick_probe(bytes, off) {
-            Probe::Garbage => off += 4,
-            Probe::Water => off += 4,
-            Probe::Land => {
-                if prefilter(bytes, off) && validate(bytes, off) {
-                    if let Some(g) = extract(bytes, refine_start(bytes, off)) {
-                        let next = g.offset + GRID_BYTES;
-                        out.push(g);
-                        off = next;
-                        continue;
-                    }
-                }
-                off += 4;
+        if !probe_rejects(bytes, off) && prefilter(bytes, off) && validate(bytes, off) {
+            if let Some(g) = extract(bytes, refine_start(bytes, off)) {
+                let next = g.offset + GRID_BYTES;
+                out.push(g);
+                off = next;
+                continue;
             }
         }
+        off += 4;
     }
     out
 }
 
-/// Cheap classification of a candidate window from 64 cells spread over
-/// the whole grid (every 32nd row and column): a window whose spread
-/// sample has no land cannot pass validation's land gate.
-enum Probe {
-    /// A cell outside `NaN ∪ {0.0} ∪ [MIN_HEIGHT, MAX_HEIGHT]`.
-    Garbage,
-    /// All sampled cells sane but none of them land.
-    Water,
-    /// At least one nonzero height cell.
-    Land,
-}
-
-fn quick_probe(bytes: &[u8], off: usize) -> Probe {
-    let mut land = false;
+/// Cheap rejection from 64 cells spread over the whole grid (every
+/// 32nd row and column). Sound as a rejector only: every probe
+/// position is also a validator position, so a range violation here
+/// guarantees `validate` fails. The probe deliberately draws no
+/// accept-side conclusion.
+fn probe_rejects(bytes: &[u8], off: usize) -> bool {
     for i in 0..64 {
         let r = (i / 8) * 32;
         let c = (i % 8) * 32;
         let Some(v) = cell(bytes, off + (r * (COLS + 1) + c) * 4) else {
-            return Probe::Garbage;
+            return true;
         };
-        if v.is_nan() || v.abs() < MIN_LAND {
+        if v.is_nan() {
             continue;
         }
-        if !(MIN_LAND..=MAX_HEIGHT).contains(&v) && !(-MAX_HEIGHT..=-MIN_LAND).contains(&v) {
-            return Probe::Garbage;
+        if !(MIN_HEIGHT..=MAX_HEIGHT).contains(&v) {
+            return true;
         }
-        land = true;
     }
-    if land {
-        Probe::Land
-    } else {
-        Probe::Water
-    }
+    false
 }
 
 /// After a hit, walks back one row at a time while the window still
@@ -359,17 +344,12 @@ fn refine_start(bytes: &[u8], hit: usize) -> usize {
 pub fn scan(bytes: &[u8], from: usize) -> Option<HeightGrid> {
     let mut off = from & !3;
     while off + GRID_BYTES <= bytes.len() {
-        match quick_probe(bytes, off) {
-            Probe::Garbage | Probe::Water => off += 4,
-            Probe::Land => {
-                if prefilter(bytes, off) && validate(bytes, off) {
-                    if let Some(g) = extract(bytes, refine_start(bytes, off)) {
-                        return Some(g);
-                    }
-                }
-                off += 4;
+        if !probe_rejects(bytes, off) && prefilter(bytes, off) && validate(bytes, off) {
+            if let Some(g) = extract(bytes, refine_start(bytes, off)) {
+                return Some(g);
             }
         }
+        off += 4;
     }
     None
 }
@@ -449,10 +429,44 @@ mod tests {
         assert!(read_dims(&d).is_none());
     }
 
+    /// Regression (review round 1, finding 1): a window whose land the
+    /// probe's 32-cell lattice cannot see (blocks offset between probe
+    /// rows/columns) still passes full validation — the probe must never
+    /// be an accept-side shortcut.
     #[test]
-    fn rejects_ff_filler() {
+    fn finds_probe_invisible_land() {
+        let mut d = vec![0u8; 0x4000 + GRID_BYTES + 16];
+        let base = 0x4000;
+        for r in 0..ROWS {
+            for c in 0..COLS + 1 {
+                let land = r % 32 >= 16 && r % 32 < 24 && c % 32 >= 16 && c % 32 < 24;
+                let v = if land { 30.0f32 } else { 0.0 };
+                let o = base + (r * (COLS + 1) + c) * 4;
+                d[o..o + 4].copy_from_slice(&v.to_le_bytes());
+            }
+        }
+        let g = scan(&d, 0x3000).expect("probe-invisible window must still be found");
+        // The all-zero padding blends into the grid's water rows, so the
+        // earliest validating window may start before the fixture's grid;
+        // the regression point is that a window is found at all and it
+        // carries the probe-invisible land.
+        let (lo, hi) = g.height_range().unwrap();
+        assert_eq!((lo, hi), (0.0, 30.0));
+        assert!(g.offset <= 0x4000);
+    }
+
+    #[test]
+    fn rejects_pure_ff_filler() {
+        // 0xFF bytes read as NaN everywhere: sane for the range gates,
+        // but the land gate rejects it.
+        let d = vec![0xFFu8; 0x4000 + GRID_BYTES + 16];
+        assert!(scan(&d, 0x3000).is_none());
+    }
+
+    #[test]
+    fn rejects_mixed_ff_zero_filler() {
+        // NaN/zero mix with no land: rejects on the land gate.
         let mut d = vec![0xFFu8; 0x4000 + GRID_BYTES + 16];
-        // land fraction 0 everywhere except one strip of 0x00 is absent → no hit
         for (i, b) in d.iter_mut().enumerate() {
             if i % 7 == 0 {
                 *b = 0;
@@ -478,7 +492,11 @@ mod tests {
         };
         let g = scan(&bytes, 0x3000).unwrap_or_else(|| panic!("no grid in {}", path.display()));
         let (lo, hi) = g.height_range().unwrap();
-        // Alpine relief as measured during calibration (metres).
+        // Verified decode: the map's own dims header must say the
+        // lattice is 256×256 (the only lattice the fixed window
+        // geometry is known to read rectilinearly).
+        let dims = read_dims(&bytes).expect("dims header present");
+        assert_eq!((&dims.values[4], &dims.values[5]), (&256, &256));
         assert!(g.offset < 0x20_0000, "offset {:#x}", g.offset);
         assert!(lo >= -1000.0 && hi <= 4000.0, "range {lo}..{hi}");
         assert!(hi > 1500.0, "expected alpine relief, max {hi}");

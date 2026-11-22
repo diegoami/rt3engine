@@ -134,9 +134,11 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
         eprintln!("rt3ctl: {}: no validated coarse grid found", path.display());
         return ExitCode::from(1);
     };
+    let dims = terrain::read_dims(&bytes);
+    let status = grid_status(&dims, true).unwrap_or("candidate");
     let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
     println!(
-        "{}: grid at {:#x} ({}x{}, {} m..{} m, NaN {} / zero {})",
+        "{}: grid at {:#x} ({}x{}, {} m..{} m, NaN {} / zero {}) [{}]",
         path.display(),
         g.offset,
         terrain::COLS,
@@ -144,7 +146,8 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
         lo,
         hi,
         g.nan_cells,
-        g.zero_cells
+        g.zero_cells,
+        status
     );
     print_relief(&g);
     ExitCode::SUCCESS
@@ -173,12 +176,30 @@ fn terrain_paths(root: &std::path::Path) -> Vec<(String, PathBuf)> {
     out
 }
 
+/// A grid hit counts as *verified* only when the map's own dims header
+/// says the lattice is 256×256: the scanner's fixed geometry (257×257
+/// corner window, 1,032-byte rows) is only known to read a rectilinear
+/// subwindow of the parent grid for that lattice (proven on Crossing
+/// the Alps, whose header reads 256,256). On wider lattices the same
+/// window geometry cannot be a rectilinear subwindow of a row-major
+/// parent, so those hits are recorded as candidates.
+fn grid_status(dims: &Option<terrain::TerrainDims>, has_grid: bool) -> Option<&'static str> {
+    if !has_grid {
+        return None;
+    }
+    match dims {
+        Some(d) if d.values[4] == 256 && d.values[5] == 256 => Some("verified"),
+        _ => Some("candidate"),
+    }
+}
+
 fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
     let paths = terrain_paths(root);
     struct Row {
         name: String,
         dims: Option<terrain::TerrainDims>,
         grid: Option<(usize, usize, usize, f32, f32)>,
+        status: Option<&'static str>,
         missed: Option<&'static str>,
     }
     let mut rows = Vec::new();
@@ -188,6 +209,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 name: name.clone(),
                 dims: None,
                 grid: None,
+                status: None,
                 missed: Some("unreadable"),
             });
             continue;
@@ -200,11 +222,13 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
             (g.offset, g.nan_cells, g.zero_cells, lo, hi)
         });
+        let status = grid_status(&dims, grid.is_some());
         let missed = grid.is_none().then_some("no validated grid");
         rows.push(Row {
             name: name.clone(),
             dims,
             grid,
+            status,
             missed,
         });
     }
@@ -232,12 +256,16 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 ),
                 None => "null".to_string(),
             };
+            let status = match r.status {
+                Some(st) => format!("\"{st}\""),
+                None => "null".to_string(),
+            };
             let missed = match r.missed {
                 Some(why) => format!("\"{why}\""),
                 None => "null".to_string(),
             };
             println!(
-                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"missed\": {missed}}}{comma}",
+                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"status\": {status}, \"missed\": {missed}}}{comma}",
                 json_escape(&r.name)
             );
         }
@@ -245,9 +273,10 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         println!("}}");
     } else {
         for r in &rows {
+            let status = r.status.unwrap_or_default();
             match (&r.dims, &r.grid) {
                 (Some(d), Some(gr)) => println!(
-                    "{:<26} dims@{:#8x} [{},{},{},{}]  grid@{:#8x} {:.0}..{:.0} m",
+                    "{:<26} dims@{:#8x} [{},{},{},{}]  grid@{:#8x} {:.0}..{:.0} m  {status}",
                     r.name,
                     d.header_offset,
                     d.values[0],
@@ -263,7 +292,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                     r.name, d.header_offset, d.values[0], d.values[2], d.values[4], d.values[6]
                 ),
                 (None, Some(gr)) => println!(
-                    "{:<26} no dims header            grid@{:#8x} {:.0}..{:.0} m",
+                    "{:<26} no dims header            grid@{:#8x} {:.0}..{:.0} m  {status}",
                     r.name, gr.0, gr.3, gr.4
                 ),
                 (None, None) => println!("{:<26} no dims header, no raw grid", r.name),

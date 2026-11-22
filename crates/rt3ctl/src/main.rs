@@ -79,7 +79,7 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             Some("list") => Ok(Command::MapList(map_cmd::parse(it))),
             Some("terrain") => {
                 let mut path = None;
-                let mut name = None;
+                let mut name: Option<String> = None;
                 let mut all = false;
                 let mut json = false;
                 while let Some(arg) = it.next() {
@@ -87,12 +87,20 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                         "--path" => {
                             if let Some(value) = it.next() {
                                 path = Some(PathBuf::from(value));
+                            } else {
+                                return Err("map terrain: --path needs a value".to_string());
                             }
                         }
                         "--all" => all = true,
                         "--json" => json = true,
+                        other if other.starts_with("--") => {
+                            return Err(format!("map terrain: unknown option {other}"));
+                        }
                         other => name = Some(other.to_string()),
                     }
+                }
+                if name.is_some() && all {
+                    return Err("map terrain: --all takes no map name".to_string());
                 }
                 if all || name.is_some() {
                     Ok(Command::MapTerrain(map_cmd::MapTerrain {
