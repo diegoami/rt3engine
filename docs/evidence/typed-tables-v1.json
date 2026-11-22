@@ -1,0 +1,11 @@
+{
+  "cargo_types": {"files": 41},
+  "building_types": {"files": 190},
+  "building_behaviors": {"files": 67, "subrecords": 99, "scripts": 35},
+  "locomotives": {"files": 66},
+  "car_types": {"files": 145},
+  "text_tables": {"tree_types_rows": 268, "airplane_types_rows": 7},
+  "language": {"strings": 3868},
+  "engine_cfg": {"width": 800, "height": 600},
+  "game_cfg": {"leading_u32": 1065}
+}
