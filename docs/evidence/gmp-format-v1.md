@@ -38,11 +38,17 @@ map-specific tail (terrain + objects; grammar open — see below)
 
 ## Corrected claims (supersede issue #8 comments 1–2)
 
-- There is no length-prefixed chunk stream and no fixed terrain-size field
-  at 0x3008: `u32@file+0x3008` is 0 in **every** shipped map. The earlier
-  "universal chunk prelude" reading was a misinterpretation of the fixed
-  record's zero region; the 4,227,072 constant appears at variable offsets
-  inside variable-length records (role open).
+- There is no length-prefixed chunk stream: the file is a cherry-picked
+  fixed record. The earlier "universal chunk prelude" reading was a
+  misinterpretation of the fixed record's zero region.
+- Offset bases must be stated precisely (round-1 review finding):
+  - `u32` at **file offset 0x3008** (= record+0x3004, inside the fixed
+    map record): nonzero in all 43 shipped maps — 4,227,072 in 36 maps,
+    37,781,502-class / 21,004,288 / 54,558,720 in the others. A genuine
+    per-map, size-like field; semantics open (terrain scale unproven).
+  - `u32` at **record offset 0x3008** (file offset 0x300C): 0 in every
+    shipped map — the value my original check (mis-labeled as file+0x3008)
+    actually measured.
 
 ## Open
 
