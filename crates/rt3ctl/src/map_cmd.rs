@@ -1,14 +1,25 @@
 //! `rt3ctl map list` — inventory the shipped `.gmp` scenario maps.
+//! `rt3ctl map terrain <name>` — extract and preview the coarse
+//! terrain heightfield of one map (milestone 3b).
 
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rt3_kit::map::GmpMap;
+use rt3_kit::terrain;
 
 /// Arguments of `rt3ctl map list`.
 pub struct MapList {
     pub path: Option<PathBuf>,
+    pub json: bool,
+}
+
+/// Arguments of `rt3ctl map terrain`.
+pub struct MapTerrain {
+    pub path: Option<PathBuf>,
+    pub name: Option<String>,
+    pub all: bool,
     pub json: bool,
 }
 
@@ -61,6 +72,242 @@ fn json_escape(value: &str) -> String {
     }
     out.push('"');
     out
+}
+
+/// Runs `map terrain`: one map (`<name>`) prints statistics plus an
+/// ASCII relief preview; `--all` scans every current-format map and
+/// prints one summary line each; `--all --json` emits the machine form
+/// that backs `docs/evidence/terrain-scan-v1.json`.
+pub fn run_terrain(t: MapTerrain) -> ExitCode {
+    let Some(root) = t
+        .path
+        .clone()
+        .or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from))
+    else {
+        eprintln!("rt3ctl: map terrain needs --path or RT3_HOME");
+        return ExitCode::from(2);
+    };
+    if t.all {
+        return run_terrain_all(&root, t.json);
+    }
+    let Some(name) = t.name.clone() else {
+        eprintln!("rt3ctl: map terrain needs a map name or --all");
+        return ExitCode::from(2);
+    };
+    let mut candidates = Vec::new();
+    for dir in ["maps", "Data/Tutorial"] {
+        let dir = root.join(dir);
+        if let Ok(rd) = fs::read_dir(&dir) {
+            for entry in rd.filter_map(|e| e.ok()) {
+                let p = entry.path();
+                let stem = p.file_stem().and_then(|n| n.to_str()).unwrap_or("");
+                if p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("gmp"))
+                    .unwrap_or(false)
+                    && stem.eq_ignore_ascii_case(&name)
+                {
+                    candidates.push(p);
+                }
+            }
+        }
+    }
+    let Some(path) = candidates.first() else {
+        eprintln!("rt3ctl: no .gmp named {name:?} under the installation");
+        return ExitCode::from(2);
+    };
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("rt3ctl: {}: {e}", path.display());
+            return ExitCode::from(1);
+        }
+    };
+    if GmpMap::peek_version(&bytes) != Some(9701) {
+        eprintln!(
+            "rt3ctl: {}: not a current-format (9701) map",
+            path.display()
+        );
+        return ExitCode::from(1);
+    }
+    let Some(g) = terrain::scan(&bytes, 0x3000) else {
+        eprintln!("rt3ctl: {}: no validated coarse grid found", path.display());
+        return ExitCode::from(1);
+    };
+    let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
+    println!(
+        "{}: grid at {:#x} ({}x{}, {} m..{} m, NaN {} / zero {})",
+        path.display(),
+        g.offset,
+        terrain::COLS,
+        terrain::ROWS,
+        lo,
+        hi,
+        g.nan_cells,
+        g.zero_cells
+    );
+    print_relief(&g);
+    ExitCode::SUCCESS
+}
+
+fn terrain_paths(root: &std::path::Path) -> Vec<(String, PathBuf)> {
+    let mut out = Vec::new();
+    for dir in ["maps", "Data/Tutorial"] {
+        let dir = root.join(dir);
+        if let Ok(rd) = fs::read_dir(&dir) {
+            for entry in rd.filter_map(|e| e.ok()) {
+                let p = entry.path();
+                if p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("gmp"))
+                    .unwrap_or(false)
+                {
+                    if let Some(stem) = p.file_stem().and_then(|n| n.to_str()) {
+                        out.push((stem.to_string(), p.clone()));
+                    }
+                }
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
+    let paths = terrain_paths(root);
+    struct Row {
+        name: String,
+        dims: Option<terrain::TerrainDims>,
+        grid: Option<(usize, usize, usize, f32, f32)>,
+        missed: Option<&'static str>,
+    }
+    let mut rows = Vec::new();
+    for (name, path) in &paths {
+        let Ok(bytes) = fs::read(path) else {
+            rows.push(Row {
+                name: name.clone(),
+                dims: None,
+                grid: None,
+                missed: Some("unreadable"),
+            });
+            continue;
+        };
+        if GmpMap::peek_version(&bytes) != Some(9701) {
+            continue; // legacy layout: separate claim
+        }
+        let dims = terrain::read_dims(&bytes);
+        let grid = terrain::scan(&bytes, 0x3000).map(|g| {
+            let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
+            (g.offset, g.nan_cells, g.zero_cells, lo, hi)
+        });
+        let missed = grid.is_none().then_some("no validated grid");
+        rows.push(Row {
+            name: name.clone(),
+            dims,
+            grid,
+            missed,
+        });
+    }
+    if json {
+        println!("{{");
+        println!("  \"maps\": [");
+        let n = rows.len();
+        for (i, r) in rows.iter().enumerate() {
+            let comma = if i + 1 < n { "," } else { "" };
+            let dims = match &r.dims {
+                Some(d) => format!(
+                    "{{\"offset\": {}, \"values\": [{}]}}",
+                    d.header_offset,
+                    d.values
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                None => "null".to_string(),
+            };
+            let grid = match &r.grid {
+                Some((off, nan, zero, lo, hi)) => format!(
+                    "{{\"grid_offset\": {off}, \"nan_cells\": {nan}, \"zero_cells\": {zero}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}}"
+                ),
+                None => "null".to_string(),
+            };
+            let missed = match r.missed {
+                Some(why) => format!("\"{why}\""),
+                None => "null".to_string(),
+            };
+            println!(
+                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"missed\": {missed}}}{comma}",
+                json_escape(&r.name)
+            );
+        }
+        println!("  ]");
+        println!("}}");
+    } else {
+        for r in &rows {
+            match (&r.dims, &r.grid) {
+                (Some(d), Some(gr)) => println!(
+                    "{:<26} dims@{:#8x} [{},{},{},{}]  grid@{:#8x} {:.0}..{:.0} m",
+                    r.name,
+                    d.header_offset,
+                    d.values[0],
+                    d.values[2],
+                    d.values[4],
+                    d.values[6],
+                    gr.0,
+                    gr.3,
+                    gr.4
+                ),
+                (Some(d), None) => println!(
+                    "{:<26} dims@{:#8x} [{},{},{},{}]  no raw grid",
+                    r.name, d.header_offset, d.values[0], d.values[2], d.values[4], d.values[6]
+                ),
+                (None, Some(gr)) => println!(
+                    "{:<26} no dims header            grid@{:#8x} {:.0}..{:.0} m",
+                    r.name, gr.0, gr.3, gr.4
+                ),
+                (None, None) => println!("{:<26} no dims header, no raw grid", r.name),
+            }
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+/// ASCII relief: block means over the grid, shaded from the 5th to the
+/// 95th percentile so plains and peaks both show (validated against the
+/// oracle's in-game screenshots of the same map).
+fn print_relief(g: &terrain::HeightGrid) {
+    let mut sorted: Vec<f32> = g.heights.iter().copied().filter(|v| !v.is_nan()).collect();
+    if sorted.is_empty() {
+        return;
+    }
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let p5 = sorted[sorted.len() / 20];
+    let p95 = sorted[sorted.len() * 19 / 20];
+    let chars: Vec<char> = " .:-=+*#%@".chars().collect();
+    for r in 0..terrain::ROWS / 8 {
+        let mut line = String::new();
+        for c in 0..terrain::COLS / 6 {
+            let mut s = 0.0f32;
+            let mut n = 0usize;
+            for dr in 0..8 {
+                for dc in 0..6 {
+                    let v = g.get(r * 8 + dr, c * 6 + dc);
+                    if !v.is_nan() {
+                        s += v;
+                        n += 1;
+                    }
+                }
+            }
+            let t = if n == 0 {
+                0.0
+            } else {
+                ((s / n as f32 - p5) / (p95 - p5).max(1.0)).clamp(0.0, 0.999)
+            };
+            line.push(chars[(t * 10.0) as usize]);
+        }
+        println!("{line}");
+    }
 }
 
 /// Runs `map list`.

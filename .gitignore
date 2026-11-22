@@ -6,3 +6,4 @@
 
 # Session working areas, oracle captures and generated outputs
 /review-tmp/
+__pycache__/

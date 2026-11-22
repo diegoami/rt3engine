@@ -49,6 +49,18 @@ def game_pids():
             pass
     return pids
 
+def become_subreaper():
+    """PR_SET_CHILD_SUBREAPER=36: orphans in the launched game tree reparent
+    to this process (not to an outer subreaper), so this driver stays a real
+    ancestor of RT3.exe and Yama (ptrace_scope=1) allows /proc/pid/mem reads
+    (the game is ELF32, so the earlier x86_64 LD_PRELOAD workaround could
+    never load into it)."""
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(36, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "prctl(PR_SET_CHILD_SUBREAPER)")
+
+
 def dump(tag):
     for pid in game_pids():
         dest = f"{OUT}/mem-{tag}"
@@ -79,6 +91,7 @@ def main():
     # Coordination protocol: hold the capture lock for the whole run, from
     # display boot until the game exits (see capture_lock.py).
     lock = capture_lock.acquire()
+    become_subreaper()
     ensure_display()
     child = subprocess.Popen(
         ["wine", "explorer", "/desktop=RT3,1024x768", "RT3.exe"],
@@ -86,7 +99,24 @@ def main():
         stdout=open(f"{OUT}/rt3-oracle.log", "wb"), stderr=subprocess.STDOUT,
     )
     print(f"launched ancestor pid {child.pid}", flush=True)
-    for line in open(sys.argv[1]):
+    run_actions(open(sys.argv[1]).read().splitlines(), lock=lock)
+
+
+def take_shot(path):
+    """Captures the game window when findable, else the root (the game
+    window id changes per run and root misses the game's content)."""
+    try:
+        wid = subprocess.run([XD, "search", "--name", "Railroad"],
+                             env=ENV, capture_output=True, text=True).stdout.split()[0]
+        subprocess.run([XWD, "-id", wid, "-out", path], env=ENV)
+        return
+    except Exception:
+        pass
+    subprocess.run([XWD, "-root", "-out", path], env=ENV)
+
+
+def run_actions(lines, lock=None):
+    for line in lines:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
@@ -106,14 +136,38 @@ def main():
             subprocess.run([XD, "type", "--", " ".join(args)], env=ENV)
             time.sleep(1.0)
         elif cmd == "shot":
-            subprocess.run([XWD, "-root", "-out", f"{OUT}/shot-{args[0]}.xwd"], env=ENV)
+            take_shot(f"{OUT}/shot-{args[0]}.xwd")
             print(f"shot {args[0]}", flush=True)
         elif cmd == "dump":
             dump(args[0])
         else:
             print(f"unknown stage action: {line}", flush=True)
-    print("stages complete; waiting for game exit (capture lock held)", flush=True)
-    capture_lock.hold_until_game_exit(lock, game_pids)
+    print("stages complete; holding capture; remote control in", f"{OUT}/rt3-rc/", flush=True)
+    if lock is not None:
+        rc_hold(lock, game_pids)
+
+
+def rc_hold(lock, pids_of, poll_seconds=2):
+    """Holds the capture (and lock) until the game exits, executing remote
+    control command files placed in /tmp/opencode/rt3-rc/ (stage grammar;
+    this process is the memory-dump-capable ancestor of the game)."""
+    import time as _t
+    rc_dir = f"{OUT}/rt3-rc"
+    os.makedirs(rc_dir, exist_ok=True)
+    while True:
+        for name in sorted(os.listdir(rc_dir)):
+            path = os.path.join(rc_dir, name)
+            try:
+                lines = open(path).read().splitlines()
+            except OSError:
+                continue
+            os.unlink(path)
+            print(f"rc {name}: {lines}", flush=True)
+            run_actions(lines)
+        if not pids_of():
+            print("game exited; capture complete", flush=True)
+            return
+        _t.sleep(poll_seconds)
 
 if __name__ == "__main__":
     main()
