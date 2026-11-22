@@ -21,5 +21,6 @@
 //! (typed game-data records and text/config). The remaining families land
 //! with their milestones.
 
+pub mod map;
 pub mod pk4;
 pub mod typed;
