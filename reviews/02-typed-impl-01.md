@@ -39,3 +39,26 @@ BLOCK
 
 Gates after the fixes: `make test` (13 rt3-kit tests incl. install-backed),
 `make fmt`, `make clippy` all pass.
+
+## Round 2 verdict
+
+- **Revision covered:** `02837caf89c63e93036f16d2afa5432ed30b057e`
+- **Files checked:** `crates/rt3-kit/src/lib.rs`, `crates/rt3-kit/src/typed.rs`, `crates/rt3ctl/src/main.rs`, `crates/rt3ctl/src/typed_cmd.rs`, `docs/evidence/README.md`, `docs/evidence/typed-formats-v1.md`, `docs/evidence/typed-tables-v1.json`, `reviews/02-typed-impl-01.md`, `tools/evidence.sh`.
+- **How obtained:** local diff from merge-base `c5226a62fdce54d052e1890322a61b9e53ae4a38` (`git merge-base main HEAD`, then `git diff --name-only <merge-base>..HEAD`); `HEAD` matched the covered revision. Inspected `git show 02837ca`.
+- **Reviewer:** GPT-6 Luna, `opencode-go/gpt-6-luna#high`
+- **Mode:** OpenCode
+
+### Round-1 finding resolution
+
+1. **round-1 blocking finding — resolved.** `crates/rt3-kit/src/typed.rs:365-370` now reads the four `.car` tail `u32`s at offsets 252/258/264/268. The `car_and_bca_shape` regression fixture assigns distinct values at those offsets and asserts the decoded array, including the intro/end year values. This addresses the misaligned read at 260.
+2. **round-1 blocking finding — resolved.** `crates/rt3-kit/src/typed.rs:143-150,223-230` checks for the four-byte version field before reading it. `short_inputs_error_instead_of_panicking` at line 655 exercises lengths 0, 1, and 3 for both parsers and asserts errors.
+
+No blocking findings remain.
+
+### Verification
+
+- `make test fmt clippy` passed with the requested `PATH` and `RT3_HOME` set.
+- The test output showed `typed::tests::parses_every_shipped_typed_file ... ok`; the install-backed typed test ran, not skipped. All 13 `rt3-kit` tests passed, and the evidence check, formatting check, and warning-denied Clippy check passed.
+
+— GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
+AGREE
