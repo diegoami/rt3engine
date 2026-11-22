@@ -16,6 +16,7 @@
 
 mod inventory;
 mod pk4_cmd;
+mod typed_cmd;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -25,6 +26,7 @@ const USAGE: &str = "rt3ctl — RT3Engine command line
 Usage:
   rt3ctl inventory [--path <install-root>] [--json]
   rt3ctl pk4 list [--path <install-root>] [--archive <file>]... [--json]
+  rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl --help
 
 Environment:
@@ -34,6 +36,7 @@ Environment:
 enum Command {
     Inventory { path: Option<PathBuf>, json: bool },
     Pk4List(pk4_cmd::Pk4List),
+    TypedList(typed_cmd::TypedList),
     Help,
 }
 
@@ -66,6 +69,13 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             Some("list") => Ok(Command::Pk4List(pk4_cmd::parse(it))),
             Some("--help") | Some("help") | None => Err("pk4 needs a subcommand: list".to_string()),
             Some(other) => Err(format!("unknown pk4 subcommand: {other}")),
+        },
+        "typed" => match it.next().map(String::as_str) {
+            Some("list") => Ok(Command::TypedList(typed_cmd::parse(it))),
+            Some("--help") | Some("help") | None => {
+                Err("typed needs a subcommand: list".to_string())
+            }
+            Some(other) => Err(format!("unknown typed subcommand: {other}")),
         },
         "--help" | "help" => Ok(Command::Help),
         other => Err(format!("unknown command: {other}")),
@@ -111,5 +121,6 @@ fn main() -> ExitCode {
             }
         }
         Command::Pk4List(list) => pk4_cmd::run(list),
+        Command::TypedList(list) => typed_cmd::run(list),
     }
 }

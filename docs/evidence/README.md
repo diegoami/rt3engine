@@ -21,9 +21,12 @@ Checks self-skip without `RT3_HOME` (CI).
 | --- | --- | --- |
 | `install-inventory-v1.json` | Aggregate installation inventory: 1,176 files, ~2.02 GB; per-top-level-entry and per-extension counts/sizes (metadata only) | `rt3ctl inventory --json` |
 | `pk4-archives-v1.json` | PK4 aggregate: 18 archives, format version 1003, 8,375 entries, ~387 MB raw payload, per-archive totals (metadata only) | `rt3ctl pk4 list --json` |
+| `typed-tables-v1.json` | Typed-data aggregate: 41 cargo, 190 building types, 67 behaviors (99 subrecords, 35 scripts), 66 locomotives, 145 car types, 268 tree rows, 3,868 language strings, engine.cfg 800×600 | `rt3ctl typed list --json` |
 
 Format findings with method and provenance live beside them:
-[pk4-format-v1.md](pk4-format-v1.md) (PK4 layout; claim level: parse).
-Milestone 2 adds typed-data tables; later milestones add map and save
+[pk4-format-v1.md](pk4-format-v1.md) (PK4 layout; claim level: parse) and
+[typed-formats-v1.md](typed-formats-v1.md) (typed records and text/config;
+claim level: parse).
+Milestone 3 adds map findings; later milestones add save
 findings, each with its producer command and method note (Ghidra address,
 oracle session, or both).

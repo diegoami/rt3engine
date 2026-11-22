@@ -17,7 +17,9 @@
 //! ever committed; tests use fixtures or the installation via `RT3_HOME` and
 //! self-skip when it is unset.
 //!
-//! Status: milestone 1 — `pk4` (PK4 asset archives) is implemented; the other
-//! families land with their milestones.
+//! Status: milestone 1 — `pk4` (PK4 asset archives); milestone 2 — `typed`
+//! (typed game-data records and text/config). The remaining families land
+//! with their milestones.
 
 pub mod pk4;
+pub mod typed;
