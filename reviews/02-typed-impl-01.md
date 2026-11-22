@@ -62,3 +62,19 @@ No blocking findings remain.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit (owner-delegated merge per decision 0002,
+2026-11-22). Done-when items and their evidence:
+
+- Issue #5 (format RE): `docs/evidence/typed-formats-v1.md` documents all
+  typed families with Ghidra loader addresses and exact-length validation
+  over every shipped file; open semantics recorded.
+- Issue #6 (readers): `rt3-kit::typed` parsers + `scan_family`;
+  install-backed test parses all shipped typed files; `rt3ctl typed list`
+  CLI; aggregate evidence `typed-tables-v1.json` in `make evidence-check`.
+- Claim level achieved: **parse**. `.car` tail years and short-input error
+  paths carry regression tests from the review rounds.
+
+— Implementer (zai-coding-plan/glm-5.3)
