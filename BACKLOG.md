@@ -26,11 +26,10 @@ compensates for absent engine mechanics.
 
 1. Milestone 0 (bootstrap) and milestone 1 (PK4 archives, PR #4, merge
    `ab827b5`) are complete; issues #1/#2 closed by evidence.
-2. Current: **milestone 2 — typed data tables and text**: readers for
-   `CargoTypes/*.cty`, `BuildingTypes/*.bty`+`.bca`, `EngineTypes/*.car`+
-   `.lco`, `TreeTypes.txt`/`AirplaneTypes.txt`, `Language/RT3.lng` and
-   `Configuration/*.cfg` (cross-checked against the MIT rt3conf field
-   knowledge), with evidence artifacts.
+2. Milestones 1–3 are landed (PK4, typed data, map prelude + inventory).
+   Current: **milestone 3b — terrain decode and render** (issues #8/#9):
+   static RE plus the Wine oracle for dynamic calibration (owner decision
+   2026-11-23; Wine installation is an owner action).
 3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
    remains open (broader web survey, patch-level verification).
 
