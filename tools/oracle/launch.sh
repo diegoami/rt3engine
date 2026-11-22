@@ -1,20 +1,32 @@
 #!/bin/sh
-# RT3 oracle launcher — WORKING CONFIG (2026-11-23):
-#   DXVK d3d8/d3d9 (x32) on lavapipe, binkw32 disabled, Wine virtual desktop.
-# Uses a renamed Xvfb binary (~/tools/bin/xvfb-rt3): another automation on
-# this box kills processes matching "Xvfb" (onenil-archaeology drive loop).
-# xdotool is ~/tools/xdotool/bin/xdotool.real with LD_LIBRARY_PATH set.
-# Usage: sh tools/oracle/launch.sh   (stop: pkill -f 'RT3\.exe$')
+# RT3 oracle launcher — capture-locked (coordination protocol 2026-11-23).
+#
+# The capture lock is shared with the onenil-archaeology DOSBox-X captures:
+# exclusive flock on ~/projects/onenil-archaeology/.cache/capture.lock,
+# held for the whole capture (display boot -> game exit), auto-released.
+# Never delete the lock file; the protocol is advisory and only works when
+# every capture session honors it.
+#
+# Usage:
+#   sh tools/oracle/launch.sh [stage-file]     (default: menu screenshot)
+# The stage file lists actions for tools/oracle/drive.py:
+#   wait <s> | click <x> <y> | key <k> | type <t> | shot <tag> | dump <tag>
+#
+# Working config: DXVK x32 d3d8/d3d9 on lavapipe (passes RT3's D3D8.1
+# hardware check), binkw32 disabled, Wine virtual desktop, game copy at
+# C:/RT3 in WINEPREFIX ~/tools/wine-rt3 (original install untouched).
+# Display: renamed Xvfb binary (~/tools/bin/xvfb-rt3) with GLX — renamed
+# because legacy cleanup scripts on this box pattern-match "Xvfb".
 set -u
-export WINEPREFIX="$HOME/tools/wine-rt3"
-export WINEDEBUG=err+all
-export WINEDLLOVERRIDES='d3d8=n,d3d9=n,binkw32='
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
+STAGES="${1:-}"
 
-if ! xdpyinfo -display :99 >/dev/null 2>&1; then
-  Xvfb :99 -screen 0 1280x1024x24 +extension GLX +render -dpi 96 >/tmp/opencode/xvfb.log 2>&1 &
-  sleep 2
+if [ -z "$STAGES" ]; then
+  STAGES="$(mktemp /tmp/opencode/rt3-stages.XXXXXX)"
+  printf 'wait 40\nshot menu\n' > "$STAGES"
 fi
-export DISPLAY=:99
-cd "$WINEPREFIX/drive_c/RT3" || exit 1
-(nohup wine explorer /desktop=RT3,1024x768 RT3.exe >/tmp/opencode/rt3-oracle.log 2>&1 &)
-echo "oracle launched"
+
+# The lock is acquired INSIDE drive.py (tools/oracle/capture_lock.py) and
+# held until the game exits — do not wrap this in shell flock too: two
+# flock file descriptions in one process conflict and would self-deadlock.
+exec python3 "$ROOT/tools/oracle/drive.py" "$STAGES"

@@ -36,6 +36,15 @@ export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
 
 ## Conventions
 
+- **Capture-lock coordination (2026-11-23):** before booting the
+  emulator/display pipeline (any oracle run or its reproduction,
+  including by reviewers), take the exclusive advisory lock per
+  `tools/oracle/capture_lock.py`
+  (`~/projects/onenil-archaeology/.cache/capture.lock`, held for the whole
+  capture, auto-released on exit; never delete it to force entry). Plain
+  gates without emulator boot (cargo test/fmt/clippy, evidence checks)
+  need no lock. Review prompts for oracle-touching changes must state
+  this.
 - Never write into `RT3_HOME`; oracle saves and captures go to a working
   directory outside it (e.g. `review-tmp/`, gitignored).
 - Evidence regeneration: `make evidence-regen` / `make evidence-check`

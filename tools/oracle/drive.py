@@ -13,6 +13,9 @@ The stage file lists one action per line:
 """
 import os, subprocess, sys, time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import capture_lock
+
 GAME = os.path.expanduser("~/tools/wine-rt3/drive_c/RT3")
 PREFIX = os.path.expanduser("~/tools/wine-rt3")
 XD = os.path.expanduser("~/tools/xdotool/bin/xdotool")
@@ -73,6 +76,9 @@ def dump(tag):
         print(f"dump[{tag}] pid {pid}: {n} regions -> {dest}", flush=True)
 
 def main():
+    # Coordination protocol: hold the capture lock for the whole run, from
+    # display boot until the game exits (see capture_lock.py).
+    lock = capture_lock.acquire()
     ensure_display()
     child = subprocess.Popen(
         ["wine", "explorer", "/desktop=RT3,1024x768", "RT3.exe"],
@@ -106,7 +112,8 @@ def main():
             dump(args[0])
         else:
             print(f"unknown stage action: {line}", flush=True)
-    print("stages complete; game still running:", game_pids(), flush=True)
+    print("stages complete; waiting for game exit (capture lock held)", flush=True)
+    capture_lock.hold_until_game_exit(lock, game_pids)
 
 if __name__ == "__main__":
     main()

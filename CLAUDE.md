@@ -69,6 +69,6 @@ the bootstrap applies as written there — one review, not two stages.
   | clippy | `make clippy` | lints, warnings denied | every change | 1 | deterministic |
   | CI | `.github/workflows/check.yml` | fmt, clippy and the unit gate | pull requests and `main` pushes | as CI runs | a red CI blocks the merge |
 
-- **conventions:** English everywhere; UI text follows the original game's `RT3.lng` language when read. Comments and commits in the imperative, referencing the milestone or issue. Zero runtime dependencies at bootstrap; adding one is justified in its change. The original installation behind `RT3_HOME` is read-only, and original bytes never enter Git. Decided, not to be re-opened: `docs/decisions/0001-founding-decisions.md`. Open work lives in `BACKLOG.md` and `docs/milestones.md`.
+- **conventions:** English everywhere; UI text follows the original game's `RT3.lng` language when read. Before any emulator/oracle boot (including review reproduction), take the capture lock per `docs/environment.md` — it coordinates with the other capture session on this machine and applies to reviewers too. Comments and commits in the imperative, referencing the milestone or issue. Zero runtime dependencies at bootstrap; adding one is justified in its change. The original installation behind `RT3_HOME` is read-only, and original bytes never enter Git. Decided, not to be re-opened: `docs/decisions/0001-founding-decisions.md`. Open work lives in `BACKLOG.md` and `docs/milestones.md`.
 
 <!-- SLOT:END -->
