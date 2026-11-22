@@ -141,6 +141,12 @@ impl BuildingType {
     const HEADER: usize = 0xCF;
 
     pub fn parse(path: &Path, d: &[u8]) -> Result<BuildingType, TypedError> {
+        if d.len() < 4 {
+            return Err(TypedError::new(
+                path,
+                format!("truncated: {} bytes", d.len()),
+            ));
+        }
         let version = i32_at(d, 0);
         if version != 1004 {
             return Err(TypedError::new(
@@ -215,6 +221,12 @@ impl BuildingBehavior {
     const TAIL: usize = 169;
 
     pub fn parse(path: &Path, d: &[u8]) -> Result<BuildingBehavior, TypedError> {
+        if d.len() < 4 {
+            return Err(TypedError::new(
+                path,
+                format!("truncated: {} bytes", d.len()),
+            ));
+        }
         let version = i32_at(d, 0);
         if version != 1010 {
             return Err(TypedError::new(
@@ -352,7 +364,7 @@ impl CarType {
             tail_name: fixed_name(&d[192..252]).map_err(|e| TypedError::new(path, e))?,
             tail_u32s: [
                 u32_at(d, 252),
-                u32_at(d, 260),
+                u32_at(d, 258),
                 u32_at(d, 264),
                 u32_at(d, 268),
             ],
@@ -571,11 +583,22 @@ mod tests {
         d[132..138].copy_from_slice(b"TESTL\0");
         d[162..167].copy_from_slice(b"Test\0");
         d[192..197].copy_from_slice(b"Tail\0");
+        // Tail layout: u32@252, u8, u8, u32@258 (intro year), u8, u8,
+        // u32@264 (end year), u32@268.
+        d[252..256].copy_from_slice(&6u32.to_le_bytes());
+        d[256] = 1;
+        d[257] = 1;
+        d[258..262].copy_from_slice(&1946u32.to_le_bytes());
+        d[262] = 1;
+        d[263] = 1;
+        d[264..268].copy_from_slice(&1960u32.to_le_bytes());
+        d[268..272].copy_from_slice(&200.0f32.to_le_bytes());
         let car = CarType::parse(Path::new("Test.car"), &d).unwrap();
         assert_eq!(
             (car.flag, car.display_name.as_str(), car.lco_name.as_str()),
             (1, "Test Car", "Test_L")
         );
+        assert_eq!(car.tail_u32s, [6, 1946, 1960, 200.0f32.to_bits()]);
 
         // bca: header 55 + 1×188 subrecord with a script + 169 tail = 412.
         let mut b = vec![0xCCu8; 55 + 188 + 169];
@@ -626,6 +649,21 @@ mod tests {
                 .leading,
             1065
         );
+    }
+
+    #[test]
+    fn short_inputs_error_instead_of_panicking() {
+        for len in [0, 1, 3] {
+            let d = vec![0xCCu8; len];
+            assert!(
+                BuildingType::parse(Path::new("x.bty"), &d).is_err(),
+                "bty len {len}"
+            );
+            assert!(
+                BuildingBehavior::parse(Path::new("x.bca"), &d).is_err(),
+                "bca len {len}"
+            );
+        }
     }
 
     /// Install-backed check: parses every typed file when `RT3_HOME` is set.
