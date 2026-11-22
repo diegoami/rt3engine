@@ -54,3 +54,19 @@ The blocking finding is **resolved**. The evidence now distinguishes file+`0x300
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `942aab5` (delegated merge per decision 0002,
+2026-11-22). Done-when items and evidence:
+
+- Issue #8 (partial): `docs/evidence/gmp-format-v1.md` records the proven
+  prelude with loader provenance and explicitly corrected interim claims
+  (both 0x3008 offset bases; per-map field semantics open). Terrain/tail
+  decode remains open on #8.
+- Issue #9 (partial): `rt3-kit::map` prelude reader + `rt3ctl map list` +
+  `maps-inventory-v1.json`; install-backed check over all 43 shipped maps
+  (40 current v9701, 3 legacy 9609/9610 detected). No render claim.
+- Claim level achieved: parse (prelude).
+
+— Implementer (zai-coding-plan/glm-5.3)
