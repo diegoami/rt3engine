@@ -29,3 +29,28 @@ BLOCK
    other size-like values in the rest) and is a genuine per-map field with
    open semantics; record+0x3008 is 0 everywhere. The "Corrected claims"
    section now states both offset bases explicitly.
+
+## Round 2 verdict
+
+- **Revision covered:** `a8e16c7bd000db3d18ce636f891593f8b8db15f1`
+- **Files checked:** `crates/rt3-kit/src/lib.rs`, `crates/rt3-kit/src/map.rs`, `crates/rt3ctl/src/main.rs`, `crates/rt3ctl/src/map_cmd.rs`, `docs/evidence/README.md`, `docs/evidence/gmp-format-v1.md`, `docs/evidence/maps-inventory-v1.json`, `reviews/03-map-prelude-impl-01.md`, `tools/evidence.sh`.
+- **How obtained:** local diff from merge-base `5ad99481ce7c11806d82d56127a452ebda97a719` (`git merge-base main HEAD`, then `git diff --name-only <merge-base>..HEAD`); inspected `git show a8e16c7`; checked-out `HEAD` matched the covered revision.
+- **Reviewer:** GPT-6 Luna, `opencode-go/gpt-6-luna#high`
+- **Mode:** OpenCode
+
+### Round-1 finding resolution
+
+The blocking finding is **resolved**. The evidence now distinguishes file+`0x3008` (= record+`0x3004`) from record+`0x3008` (= file+`0x300C`), reports the former as a nonzero per-map size-like field with semantics open, and places the all-zero observation at the latter offset. Independent reads of all 43 shipped maps confirmed both statements.
+
+## Findings
+
+1. **non-blocking** — `docs/evidence/gmp-format-v1.md:47`. The text says `37,781,502-class`; the three maps in that value group contain `37,781,504` at file+`0x3008`. The “class” qualifier makes the two-byte discrepancy immaterial to the corrected offset claim, but the exact figure could be updated.
+
+## Verification
+
+- Independent Python checks against `$RT3_HOME` found 43 maps (9701 ×40, 9609 ×2, 9610 ×1). At file+`0x3008`, the values were 4,227,072 ×36, 21,004,288 ×3, 37,781,504 ×3, and 54,558,720 ×1; at record+`0x3008` (file+`0x300C`), all 43 values were zero.
+- `make test` passed with the requested `PATH` and `RT3_HOME`; `map::tests::parses_every_shipped_map` ran, and the evidence check passed.
+- The update leaves the claim level at **parse (prelude only)** and the terrain-scale semantics open.
+
+— GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
+AGREE

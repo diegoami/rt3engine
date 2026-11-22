@@ -44,7 +44,7 @@ map-specific tail (terrain + objects; grammar open — see below)
 - Offset bases must be stated precisely (round-1 review finding):
   - `u32` at **file offset 0x3008** (= record+0x3004, inside the fixed
     map record): nonzero in all 43 shipped maps — 4,227,072 in 36 maps,
-    37,781,502-class / 21,004,288 / 54,558,720 in the others. A genuine
+    37,781,504 / 21,004,288 / 54,558,720 in the others. A genuine
     per-map, size-like field; semantics open (terrain scale unproven).
   - `u32` at **record offset 0x3008** (file offset 0x300C): 0 in every
     shipped map — the value my original check (mis-labeled as file+0x3008)
