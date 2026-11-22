@@ -96,7 +96,14 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                         other if other.starts_with("--") => {
                             return Err(format!("map terrain: unknown option {other}"));
                         }
-                        other => name = Some(other.to_string()),
+                        other => {
+                            if name.is_some() {
+                                return Err(format!(
+                                    "map terrain: unexpected extra argument {other}"
+                                ));
+                            }
+                            name = Some(other.to_string());
+                        }
                     }
                 }
                 if name.is_some() && all {

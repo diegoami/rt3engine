@@ -45,9 +45,11 @@ Southern Pacific    256,96,256,96, 1024,384,  4096,1536
 …full list in terrain-scan-v1.json
 ```
 
-The lattice is always tiles×4 and the fine grid lattice×4; the maps are
-not square in general. The coarse height grid carries `(lattice+1)²`
-corner samples.
+Across the 13 header-bearing maps the lattice is consistently
+tiles×4 and the fine grid lattice×4, and the maps are not square in
+general. The coarse height grid layout — `(lattice+1)²` corner samples
+— is verified only on the 256-lattice Crossing the Alps; for the other
+lattices it is an unverified inference from that one map.
 
 ## Proven: raw f32 coarse grid on Crossing the Alps
 
@@ -81,13 +83,16 @@ recorded as leads for the next decode step, not as decoded terrain.
 
 ## Open
 
-- **39 of 40 maps have no verified terrain decode**: 28 store their
-  heights some other way entirely (no validated window, and no dense
-  f32 spans anywhere — checked for Britain, East Coast, Ireland); the
-  11 candidate windows above await a layout demonstration (per-map row
+- **39 of 40 maps have no verified terrain decode.** 28 maps produce
+  no validated window at all; for three of them (Britain, East Coast,
+  Ireland) a separate whole-file f32-density scan also found no dense
+  height-like spans. These checks do not establish how those maps store
+  their heights — only that this scanner's gates and (on three maps) a
+  density sweep found nothing; the storage remains unknown. The 11
+  candidate windows above await a layout demonstration (per-map row
   pitch from the dims header) or in-game corroboration. The per-tile
   records (`0x2f43`/`0x2f44`, writer `0x0042b4a0` — 33-ish short arrays
-  per tile) and the quadtree levels (`0x00517d90`) are the likely
+  per tile) and the quadtree levels (`0x00517d90`) are candidate
   carriers; the read-side decoder is unidentified (the loader function
   is still unknown — only the save path is mapped).
 - The trailing cell per row; which validated window is canonical when

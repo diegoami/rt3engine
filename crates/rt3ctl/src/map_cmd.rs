@@ -87,6 +87,13 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
         eprintln!("rt3ctl: map terrain needs --path or RT3_HOME");
         return ExitCode::from(2);
     };
+    if !root.is_dir() {
+        eprintln!(
+            "rt3ctl: installation root is not a directory: {}",
+            root.display()
+        );
+        return ExitCode::from(2);
+    }
     if t.all {
         return run_terrain_all(&root, t.json);
     }
@@ -195,6 +202,15 @@ fn grid_status(dims: &Option<terrain::TerrainDims>, has_grid: bool) -> Option<&'
 
 fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
     let paths = terrain_paths(root);
+    if paths.is_empty() {
+        // A silent empty listing would look like a successful scan and
+        // could replace the evidence artifact with an empty result.
+        eprintln!(
+            "rt3ctl: no .gmp maps under {} (expected maps/ or Data/Tutorial)",
+            root.display()
+        );
+        return ExitCode::from(2);
+    }
     struct Row {
         name: String,
         dims: Option<terrain::TerrainDims>,
