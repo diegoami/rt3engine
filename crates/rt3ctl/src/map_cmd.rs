@@ -201,16 +201,20 @@ impl HitKind {
     }
 }
 
-/// Scans one map: dims-driven geometry when the header is present,
-/// else the fixed 256-lattice geometry. Returns the grid and whether
-/// the geometry came from the map itself.
+/// Scans one map. Header-bearing maps are scanned only with their own
+/// record-anchored geometry (`scan_with_dims`) — a hit is verified.
+/// Headerless maps get the fixed 256-lattice geometry as a candidate,
+/// and only when the record's extent word anchors the height at 256
+/// (otherwise the fixed window is known-wrong geometry and reporting
+/// it would mislead).
 fn scan_map(bytes: &[u8]) -> Option<(terrain::HeightGrid, HitKind)> {
     if let Some(dims) = terrain::read_dims(bytes) {
-        if let Some(g) = terrain::scan_with_dims(bytes, 0x3000, &dims) {
-            return Some((g, HitKind::Verified));
-        }
+        return terrain::scan_with_dims(bytes, 0x3000, &dims).map(|g| (g, HitKind::Verified));
     }
-    terrain::scan(bytes, 0x3000).map(|g| (g, HitKind::Candidate))
+    match terrain::lattice_h_from_record(bytes) {
+        Some(256) | None => terrain::scan(bytes, 0x3000).map(|g| (g, HitKind::Candidate)),
+        Some(_) => None,
+    }
 }
 
 fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {

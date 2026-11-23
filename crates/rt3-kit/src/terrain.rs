@@ -109,6 +109,22 @@ impl TerrainDims {
     }
 }
 
+/// The map record's first extent word (file+12) equals `lattice_h × 256`
+/// on every header-bearing map checked (13 of 13; see the evidence
+/// doc). This anchors the lattice **height** independently of the
+/// dims header, which resolves the orientation of non-square lattices.
+pub fn lattice_h_from_record(bytes: &[u8]) -> Option<usize> {
+    if bytes.len() < 16 {
+        return None;
+    }
+    let word = u32::from_le_bytes(bytes[12..16].try_into().ok()?);
+    if word % 256 != 0 {
+        return None;
+    }
+    let h = (word / 256) as usize;
+    (128..=4096).contains(&h).then_some(h)
+}
+
 /// The tag that opens the dims header.
 const DIMS_TAG: u32 = 0x2EE2;
 
@@ -434,12 +450,26 @@ pub fn scan_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Option<HeightGrid>
     None
 }
 
-/// Scans with the map's own dims-header geometry. For non-square
-/// lattices both orientations are evaluated; if both validate, the
-/// correct one cannot be distinguished and the result is reported as
-/// ambiguous (`None`) rather than guessed (review round 1, finding 1).
+/// Scans with the map's own dims-header geometry. The orientation is
+/// anchored by the map record's extent word (`lattice_h_from_record`,
+/// exact on every header-bearing map checked): the geometry whose
+/// height matches the record is the one scanned. Without a usable
+/// anchor both orientations are evaluated, and when both validate the
+/// correct one cannot be distinguished — the result is reported as
+/// ambiguous (`None`) rather than guessed.
 pub fn scan_with_dims(bytes: &[u8], from: usize, dims: &TerrainDims) -> Option<HeightGrid> {
     let (w, h) = dims.lattice();
+    if let Some(h_rec) = lattice_h_from_record(bytes) {
+        if h == h_rec {
+            return scan_geo(bytes, from, &Geometry::for_lattice(w, h));
+        }
+        if w == h_rec {
+            return scan_geo(bytes, from, &Geometry::for_lattice(h, w));
+        }
+        // The record anchor matches neither orientation: the header and
+        // the record disagree; no verified claim.
+        return None;
+    }
     let first = scan_geo(bytes, from, &Geometry::for_lattice(w, h));
     if w == h {
         return first;
@@ -573,6 +603,51 @@ mod tests {
         assert!(scan_all_geo(&d, 0x3000, &tiny).is_empty());
     }
 
+    /// The map record's extent word anchors the lattice height
+    /// (word0 = lattice_h × 256; exact on all 13 header-bearing maps).
+    #[test]
+    fn record_word_anchors_height() {
+        let mut d = vec![0u8; 64];
+        d[12..16].copy_from_slice(&0x28000u32.to_le_bytes());
+        assert_eq!(lattice_h_from_record(&d), Some(640));
+        d[12..16].copy_from_slice(&0x10001u32.to_le_bytes());
+        assert_eq!(lattice_h_from_record(&d), None); // not a multiple of 256
+        d[12..16].copy_from_slice(&0x10u32.to_le_bytes());
+        assert_eq!(lattice_h_from_record(&d), None); // out of range
+        assert_eq!(lattice_h_from_record(&[0u8; 8]), None);
+    }
+
+    /// With a usable record anchor, the anchored orientation is scanned
+    /// even though the other would also validate (the ambiguity refusal
+    /// applies only when no anchor exists).
+    #[test]
+    fn record_anchor_resolves_orientation() {
+        // Ramp data (validates under any pitch), a (512,128) header, and
+        // a record word anchoring h = 128.
+        let ramp_cells = 80_000usize;
+        let mut file = vec![0x7Fu8; 0x4000 + ramp_cells * 4 + 0x200];
+        for i in 0..ramp_cells {
+            let v = i as f32 * 0.001;
+            let o = 0x4000 + i * 4;
+            file[o..o + 4].copy_from_slice(&v.to_le_bytes());
+        }
+        file[12..16].copy_from_slice(&(128u32 * 256).to_le_bytes());
+        let hdr_at = 0x4000 + ramp_cells * 4 + 0x40;
+        file[hdr_at..hdr_at + 4].copy_from_slice(&0x2EE2u32.to_le_bytes());
+        for (i, v) in [32u32, 32, 32, 32, 512, 128, 2048, 512, 0]
+            .into_iter()
+            .enumerate()
+        {
+            let o = hdr_at + 4 + 4 * i;
+            file[o..o + 4].copy_from_slice(&v.to_le_bytes());
+        }
+        let o = hdr_at + 40;
+        file[o..o + 4].copy_from_slice(&0x2EE3u32.to_le_bytes());
+        let dims = read_dims(&file).expect("dims header parses");
+        let g = scan_with_dims(&file, 0x3000, &dims).expect("anchored orientation scanned");
+        assert_eq!((g.rows, g.cols), (129, 513));
+    }
+
     #[test]
     fn rejects_zero_filler() {
         let d = vec![0u8; 0x4000 + GRID_BYTES + 16];
@@ -675,6 +750,9 @@ mod tests {
                 2600.0f32,
             ),
             ("maps/Germany.gmp", (512, 512), 2000.0, 2400.0),
+            // Non-square lattice: orientation resolved by the record
+            // extent word (h = 640).
+            ("maps/Alternate USA.gmp", (1024, 640), 1500.0, 2100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {
