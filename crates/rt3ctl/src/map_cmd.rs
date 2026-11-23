@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rt3_kit::map::GmpMap;
+use rt3_kit::render;
 use rt3_kit::terrain;
 
 /// Arguments of `rt3ctl map list`.
@@ -21,6 +22,7 @@ pub struct MapTerrain {
     pub name: Option<String>,
     pub all: bool,
     pub json: bool,
+    pub png: Option<PathBuf>,
 }
 
 /// Parses the arguments after `map list`.
@@ -74,10 +76,36 @@ fn json_escape(value: &str) -> String {
     out
 }
 
+fn checked_png_path(root: &std::path::Path, out: &std::path::Path) -> Result<PathBuf, String> {
+    let root = root
+        .canonicalize()
+        .map_err(|e| format!("cannot resolve installation root: {e}"))?;
+    let file = out
+        .file_name()
+        .ok_or_else(|| "PNG output needs a file name".to_string())?;
+    let parent = out
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(std::path::Path::new("."))
+        .canonicalize()
+        .map_err(|e| format!("cannot resolve PNG output parent: {e}"))?;
+    let resolved = if out.exists() {
+        out.canonicalize()
+            .map_err(|e| format!("cannot resolve PNG output: {e}"))?
+    } else {
+        parent.join(file)
+    };
+    if resolved.starts_with(&root) {
+        return Err("refusing to write a PNG inside the read-only installation".to_string());
+    }
+    Ok(resolved)
+}
+
 /// Runs `map terrain`: one map (`<name>`) prints statistics plus an
-/// ASCII relief preview; `--all` scans every current-format map and
-/// prints one summary line each; `--all --json` emits the machine form
-/// that backs `docs/evidence/terrain-scan-v1.json`.
+/// ASCII relief preview and optionally writes a north-up RGB PNG;
+/// `--all` scans every current-format map and prints one summary line
+/// each; `--all --json` emits the machine form that backs
+/// `docs/evidence/terrain-scan-v1.json`.
 pub fn run_terrain(t: MapTerrain) -> ExitCode {
     let Some(root) = t
         .path
@@ -141,6 +169,20 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
         eprintln!("rt3ctl: {}: no validated coarse grid found", path.display());
         return ExitCode::from(1);
     };
+    if let Some(out) = &t.png {
+        let out = match checked_png_path(&root, out) {
+            Ok(path) => path,
+            Err(message) => {
+                eprintln!("rt3ctl: {message}");
+                return ExitCode::from(1);
+            }
+        };
+        if let Err(e) = fs::write(&out, render::encode_png(&g)) {
+            eprintln!("rt3ctl: cannot write {}: {e}", out.display());
+            return ExitCode::from(1);
+        }
+        println!("wrote north-up RGB PNG: {}", out.display());
+    }
     let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
     println!(
         "{}: grid at {:#x} ({}x{}, {} m..{} m, NaN {} / zero {}) [{}]",
@@ -500,4 +542,29 @@ pub fn run(list: MapList) -> ExitCode {
         );
     }
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn png_path_refuses_install_root_and_symlink_escape() {
+        let base = std::env::temp_dir().join(format!("rt3ctl-png-path-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let install = base.join("install");
+        let output = base.join("output");
+        fs::create_dir_all(&install).unwrap();
+        fs::create_dir_all(&output).unwrap();
+        assert!(checked_png_path(&install, &output.join("map.png")).is_ok());
+        assert!(checked_png_path(&install, &install.join("map.png")).is_err());
+        #[cfg(unix)]
+        {
+            fs::write(install.join("original.gmp"), b"original").unwrap();
+            std::os::unix::fs::symlink(install.join("original.gmp"), output.join("escape.png"))
+                .unwrap();
+            assert!(checked_png_path(&install, &output.join("escape.png")).is_err());
+        }
+        fs::remove_dir_all(base).unwrap();
+    }
 }

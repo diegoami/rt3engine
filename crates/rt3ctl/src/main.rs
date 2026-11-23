@@ -29,7 +29,7 @@ Usage:
   rt3ctl pk4 list [--path <install-root>] [--archive <file>]... [--json]
   rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl map list [--path <install-root>] [--json]
-  rt3ctl map terrain <name> [--path <install-root>]
+  rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
   rt3ctl --help
 
 Environment:
@@ -82,6 +82,7 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                 let mut name: Option<String> = None;
                 let mut all = false;
                 let mut json = false;
+                let mut png = None;
                 while let Some(arg) = it.next() {
                     match arg.as_str() {
                         "--path" => {
@@ -93,6 +94,13 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                         }
                         "--all" => all = true,
                         "--json" => json = true,
+                        "--png" => {
+                            if let Some(value) = it.next() {
+                                png = Some(PathBuf::from(value));
+                            } else {
+                                return Err("map terrain: --png needs a value".to_string());
+                            }
+                        }
                         other if other.starts_with("--") => {
                             return Err(format!("map terrain: unknown option {other}"));
                         }
@@ -109,12 +117,16 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                 if name.is_some() && all {
                     return Err("map terrain: --all takes no map name".to_string());
                 }
+                if all && png.is_some() {
+                    return Err("map terrain: --png needs one map name, not --all".to_string());
+                }
                 if all || name.is_some() {
                     Ok(Command::MapTerrain(map_cmd::MapTerrain {
                         path,
                         name,
                         all,
                         json,
+                        png,
                     }))
                 } else {
                     Err("map terrain needs a map name or --all".to_string())
