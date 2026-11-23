@@ -1,14 +1,14 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; grid decode for 10 maps (8 verified,
-2 pitch-anchored); 1 candidate window**. Established 2026-11-22/23, milestone 3b, issues
+Claim level: **framing proven; grid decode for 39 of 40 current maps
+(13 verified, 25 pitch-anchored; 1 candidate; 1 legacy map skipped)**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 8 verified grids, 2 pitch-anchored grids, 1
-candidate window, 29 with no grid; 13 with a dims header).
+(40 maps: 13 verified, 25 pitch-anchored, 1 candidate, 1 legacy-skipped
+with no result; 13 with a dims header).
 
 ## Proven: save-path section framing
 
@@ -52,6 +52,18 @@ general. The coarse height grid layout — `(lattice+1)²` corner samples
 Germany); for other lattices it is an unverified inference from those
 two maps.
 
+## Proven: byte alignment is data-dependent, and the scan covers it
+
+Odd-length sections (train-roster strings; the legacy 3,001-byte aux
+records) shift a map's post-prelude stream by 1-3 bytes, so the raw
+rows do not always sit 0-mod-4: Italy's heights sit at **2 mod 4**
+(`0x8801`-adjacent), exactly as the odd string lengths imply. The scan
+therefore tries all four byte alignments, ranked by land-like float
+density over the first 4 MiB (`alignment_rank`); hits record their
+geometry, so the chosen alignment stays visible in the artifact. The
+record-word height and the measured pitch apply unchanged at any
+alignment.
+
 ## Proven: record extent word anchors the lattice height
 
 The map record's first extent word (file+12) equals `lattice_h × 256`
@@ -66,7 +78,7 @@ map (256…768 across the 40 current maps), which suppresses fixed-geometry cand
 windows on maps whose height is not 256 — reporting a known-wrong
 window would mislead.
 
-## Proven: dims-driven raw f32 coarse grids (8 verified maps)
+## Proven: dims-driven raw f32 coarse grids (13 verified maps)
 
 The coarse heights are stored **uncompressed** as little-endian f32
 metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
@@ -111,24 +123,15 @@ a measured pitch that fails validation **ends the ladder** — the
 fixed-geometry candidate never runs after the map has spoken
 (`terrain::scan_headerless`).
 
-Funnel outcomes across the 27 current headerless maps (authoritative
-enumeration via the library):
-
-- measured and validated (2): Tex-Mex (512×576, `−121…2608 m` —
-  Sierra Madre west, plains east) and Chicago to New York (640×512,
-  `−13…1952 m` — the Appalachian diagonal).
-- measured but no window validates (5): Britain (256×512), British
-  Isles (256×512), Coast to Coast (1024×640), Germantown (448×576),
-  South East Australia (256×384) — their spans are most plausibly
-  non-terrain data with a coincidental pitch.
-- no measurable pitch (20): none of them lack a height-dense span —
-  nine scored zero lag candidates (too little land-pair data for the
-  autocorrelation, so separation was never tested) and eleven failed
-  the separation threshold.
-
-The legacy 9610 map Pacific Coastal also measures (320×832) and
-validates — a first data point that the raw-row layout reaches the
-legacy format too (not claimed beyond that).
+With alignment coverage the funnel now yields a validated grid for
+**25 of the 27 current headerless maps** — all the entries listed in
+the artifact (`"status": "pitch-anchored"`, geometry recorded). The
+two exceptions: California Island (record height 256, no measurable
+pitch → the fixed-geometry **candidate**, `−454…3051 m` at 257×257)
+and the legacy 9610 map Pacific Coastal, which is outside the
+current-map scan but measures (320×832) and validates in a direct
+check — evidence that the raw-row layout reaches the legacy format
+too (not claimed beyond that).
 
 ## Candidate windows (not established as terrain)
 

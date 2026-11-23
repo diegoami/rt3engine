@@ -425,7 +425,9 @@ fn densest_span(bytes: &[u8]) -> Option<(usize, usize)> {
     let end = bytes.len().min(PITCH_SEARCH_LIMIT);
     let mut best: Option<(usize, usize)> = None;
     let mut cur: Option<(usize, usize)> = None;
-    let mut off = 0x3000;
+    // start at the densest-ranked alignment
+    let a = alignment_rank(bytes)[0];
+    let mut off = 0x3000 + ((a + 4) & 3);
     while off + 4096 <= end {
         let mut land = 0usize;
         for i in 0..256 {
@@ -568,24 +570,52 @@ pub fn scan_all_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Vec<HeightGrid
     out
 }
 
-/// Scans for the first validated grid of the given geometry.
+/// Scans for the first validated grid of the given geometry, trying
+/// byte alignments ranked by land-like density first (odd-length
+/// string sections shift a map's whole post-prelude stream by 1-3
+/// bytes — Italy's heights sit at 2 mod 4, for example).
 pub fn scan_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Option<HeightGrid> {
     if !geo.supported() {
         return None;
     }
-    let mut off = from & !3;
-    while off + geo.grid_bytes() <= bytes.len() {
-        if !probe_rejects(bytes, off, geo)
-            && prefilter(bytes, off, geo)
-            && validate(bytes, off, geo)
-        {
-            if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
-                return Some(g);
+    for &a in &alignment_rank(bytes) {
+        let start = from + ((a + 4 - (from & 3)) & 3);
+        let mut off = start;
+        while off + geo.grid_bytes() <= bytes.len() {
+            if !probe_rejects(bytes, off, geo)
+                && prefilter(bytes, off, geo)
+                && validate(bytes, off, geo)
+            {
+                if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
+                    return Some(g);
+                }
             }
+            off += 4;
         }
-        off += 4;
     }
     None
+}
+
+/// Ranks the four byte alignments by land-like float density over the
+/// first 4 MiB (descending, ties keep natural order). Cheap: one pass
+/// per alignment sampling every 16th float.
+fn alignment_rank(bytes: &[u8]) -> [usize; 4] {
+    let end = bytes.len().min(PITCH_SEARCH_LIMIT + 0x10_0000);
+    let mut counts = [0usize; 4];
+    for (a, count) in counts.iter_mut().enumerate() {
+        let mut off = 0x3000 + ((a + 4) & 3);
+        while off + 16 <= end {
+            if let Some(v) = cell(bytes, off) {
+                if is_land_like(v) {
+                    *count += 1;
+                }
+            }
+            off += 16;
+        }
+    }
+    let mut order = [0usize, 1, 2, 3];
+    order.sort_by(|&x, &y| counts[y].cmp(&counts[x]));
+    order
 }
 
 /// Scans with the map's own dims-header geometry. The orientation is
