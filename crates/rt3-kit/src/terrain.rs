@@ -418,16 +418,14 @@ fn is_land_like(v: f32) -> bool {
     v.is_finite() && (MIN_LAND..=MAX_HEIGHT).contains(&v) || (-MAX_HEIGHT..=-MIN_LAND).contains(&v)
 }
 
-/// Finds the largest height-dense span (4 KiB windows at ≥
-/// `PITCH_SPAN_DENSITY` land-like values) within the first
+/// Finds the largest height-dense span at one byte alignment (4 KiB
+/// windows at ≥ `PITCH_SPAN_DENSITY` land-like values) within the first
 /// `PITCH_SEARCH_LIMIT` bytes. Returns `(lo, hi)`.
-fn densest_span(bytes: &[u8]) -> Option<(usize, usize)> {
+fn densest_span(bytes: &[u8], alignment: usize) -> Option<(usize, usize)> {
     let end = bytes.len().min(PITCH_SEARCH_LIMIT);
     let mut best: Option<(usize, usize)> = None;
     let mut cur: Option<(usize, usize)> = None;
-    // start at the densest-ranked alignment
-    let a = alignment_rank(bytes)[0];
-    let mut off = 0x3000 + ((a + 4) & 3);
+    let mut off = 0x3000 + ((alignment + 4) & 3);
     while off + 4096 <= end {
         let mut land = 0usize;
         for i in 0..256 {
@@ -465,14 +463,14 @@ fn densest_span(bytes: &[u8]) -> Option<(usize, usize)> {
     best
 }
 
-/// Measures the dominant row pitch inside the map's densest span by
-/// lag autocorrelation over the observed pitch candidates. Returns
+/// Measures the dominant row pitch inside one alignment's densest span
+/// by lag autocorrelation over the observed pitch candidates. Returns
 /// `(row_cells, winner_score, runner_up_score)` when at least two
 /// candidates scored and the winner is clearly separated (score ≤ 60%
 /// of the runner-up — the separation observed for real grids, e.g.
 /// Tex-Mex 10 vs 29 and Chicago to New York 10 vs 179).
-pub fn measure_pitch(bytes: &[u8]) -> Option<(usize, f32, f32)> {
-    let (lo, hi) = densest_span(bytes)?;
+fn measure_pitch_at(bytes: &[u8], alignment: usize) -> Option<(usize, f32, f32)> {
+    let (lo, hi) = densest_span(bytes, alignment)?;
     let n = (hi - lo) / 4;
     let mut scores: Vec<(f32, usize)> = Vec::new();
     for lag in PITCH_CANDIDATES {
@@ -508,6 +506,33 @@ pub fn measure_pitch(bytes: &[u8]) -> Option<(usize, f32, f32)> {
     } else {
         None
     }
+}
+
+fn unique_fallback_measurement(
+    mut measurements: impl Iterator<Item = (usize, f32, f32)>,
+) -> Option<(usize, f32, f32)> {
+    let first = measurements.next()?;
+    if measurements.next().is_some() {
+        None
+    } else {
+        Some(first)
+    }
+}
+
+/// Measures a map's row pitch at its densest-ranked byte alignment. If
+/// that alignment yields no measurement, the other three are considered
+/// only as a fallback and must yield exactly one measurable alignment;
+/// competing fallback measurements are refused rather than guessed.
+pub fn measure_pitch(bytes: &[u8]) -> Option<(usize, f32, f32)> {
+    let order = alignment_rank(bytes);
+    if let Some(measured) = measure_pitch_at(bytes, order[0]) {
+        return Some(measured);
+    }
+    unique_fallback_measurement(
+        order[1..]
+            .iter()
+            .filter_map(|&alignment| measure_pitch_at(bytes, alignment)),
+    )
 }
 
 /// How a headerless map's hit geometry was established.
@@ -854,6 +879,23 @@ mod tests {
     }
 
     #[test]
+    fn fallback_refuses_competing_measurements() {
+        let ireland = (258, 11.0, 27.9);
+        assert_eq!(
+            unique_fallback_measurement([ireland].into_iter()),
+            Some(ireland)
+        );
+        assert_eq!(
+            unique_fallback_measurement([ireland, (322, 15.2, 54.8)].into_iter()),
+            None
+        );
+        assert_eq!(
+            unique_fallback_measurement(std::iter::empty::<(usize, f32, f32)>()),
+            None
+        );
+    }
+
+    #[test]
     fn rejects_zero_filler() {
         let d = vec![0u8; 0x4000 + GRID_BYTES + 16];
         assert!(scan(&d, 0x3000).is_none());
@@ -1044,6 +1086,9 @@ mod tests {
             ("maps/Chicago to New York.gmp", (640, 512), 1500.0, 2100.0),
             // Pitch-measured width on a non-square headerless map.
             ("maps/Argentina Opens Up.gmp", (640, 384), 4000.0, 5100.0),
+            // The globally densest alignment is not the grid's alignment;
+            // the unique fallback measurement must find pitch 258.
+            ("maps/Ireland.gmp", (256, 320), 400.0, 500.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {

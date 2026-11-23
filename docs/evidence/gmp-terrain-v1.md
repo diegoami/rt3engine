@@ -1,15 +1,16 @@
 # GMP terrain format (v1 — coarse heightfield)
 
-Claim level: **framing proven; coarse-grid decode for 39 of 40 current
-maps**. Established 2026-11-22/23, milestone 3b, issues
+Claim level: **framing proven; validated coarse-grid decode for 39 of
+40 current maps, plus one candidate window**. Established
+2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 13 verified, 25 pitch-anchored, 1 candidate —
-California Island; 1 no-result — Ireland. Pacific Coastal is legacy
-9610 and outside this scan.)
+(40 current maps: 13 verified, 26 pitch-anchored, 1 candidate —
+California Island; every current map has a grid result. Pacific
+Coastal is legacy 9610 and outside this scan.)
 
 ## Proven: save-path section framing
 
@@ -56,7 +57,7 @@ do not always sit 0-mod-4: Italy's heights sit at **2 mod 4**, exactly
 where its roster implies. The scan tries all four byte alignments
 ranked by land-like float density (`alignment_rank`), and hits record
 their geometry so the chosen alignment stays visible. Residues across
-the 39 decoded grids: 10 at 0, 17 at 1, 6 at 2, 6 at 3 (mod 4).
+the 40 grid results: 10 at 0, 18 at 1, 6 at 2, 6 at 3 (mod 4).
 
 ## Proven: record extent word anchors the lattice height
 
@@ -83,23 +84,28 @@ grid. Water is 0.0 or NaN. Windows validate by value range, ≥5% land,
   record-anchored dims header (`scan_with_dims`; both orientations
   considered for non-square lattices, the record word picks the
   height). Includes Italy at alignment 2.
-- **pitch-anchored** (25): headerless maps whose height comes from the
+- **pitch-anchored** (26): headerless maps whose height comes from the
   record word and whose width comes from a clearly separated measured
   row pitch (`measure_pitch`: densest height span, lag
   autocorrelation over the observed `(w+2)` candidates, winner ≤ 60%
-  of the runner-up), validated at exactly that geometry. Renders
-  corroborate: Germany's Mittelgebirge, Tex-Mex's Sierra Madre,
-  Chicago–New York's Appalachian diagonal, Argentina's Andes edge
-  (max 4,966 m), Rhodes' island relief.
+  of the runner-up), validated at exactly that geometry. The primary
+  measurement uses the densest-ranked alignment; only when it yields
+  no measurement do the other alignments run, and exactly one fallback
+  measurement is required. Ireland needs that fallback: alignment 1
+  measures pitch 258 (11.0 versus 27.9 for the runner-up), giving a
+  validated 256×320 grid at `0x839d`, `−32…435 m`. Renders corroborate
+  the established set: Germany's Mittelgebirge, Tex-Mex's Sierra
+  Madre, Chicago–New York's Appalachian diagonal, Argentina's Andes
+  edge (max 4,966 m), Rhodes' island relief.
 - **candidate** (1): California Island — no measurable pitch and
   record height 256, so the fixed-256 guess applies (`−454…3051 m` at
   257×257); not established as terrain.
 - A measured pitch that fails validation **ends the ladder** — no
   fallback after the map has spoken (`terrain::scan_headerless`).
-  With alignment coverage, 25 of the 27 headerless maps measure a
-  pitch and validate at exactly that geometry; California Island
-  (record height 256, no measurable pitch) takes the fixed-geometry
-  candidate, and Ireland (no measurable pitch) has no result.
+  With alignment coverage and the unique fallback, 26 of the 27
+  headerless maps measure a pitch and validate at exactly that
+  geometry; California Island (record height 256, no measurable pitch
+  at any alignment) takes the fixed-geometry candidate.
 
 The legacy 9610 map Pacific Coastal is outside the current-map scan;
 a direct check shows it measures (320×832) and validates — evidence
@@ -108,10 +114,6 @@ that).
 
 ## Open
 
-- **Ireland is the only current map without a grid result** (no
-  header, record height 320, no measurable pitch). Its storage is
-  unknown — nothing was found, which does not establish how it stores
-  heights.
 - Which validated window is canonical when several fit (zero padding
   blends into leading water rows); the trailing cell per row.
 - Per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0`) and
@@ -127,7 +129,7 @@ that).
 
 ```sh
 export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
-cargo test -p rt3-kit terrain            # fixtures + Alps/Germany/Italy/Argentina
+cargo test -p rt3-kit terrain            # fixtures + Alps/Germany/Italy/Argentina/Ireland
 cargo run -q -p rt3ctl -- map terrain "Crossing the Alps"
 cargo run -q --release -p rt3ctl -- map terrain --all   # the artifact's producer
 make evidence-check                      # includes terrain-scan-v1.json
