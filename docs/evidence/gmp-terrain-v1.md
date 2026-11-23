@@ -1,14 +1,14 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; dims-driven grid decode, 8 verified
-maps**. Established 2026-11-22/23, milestone 3b, issues
+Claim level: **framing proven; grid decode for 10 maps (8 verified,
+2 pitch-anchored); 1 candidate window**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 8 verified grids, 1 candidate window, 31 with no
-grid; 13 with a dims header).
+(40 current maps: 8 verified grids, 2 pitch-anchored grids, 1
+candidate window, 29 with no grid; 13 with a dims header).
 
 ## Proven: save-path section framing
 
@@ -98,6 +98,38 @@ France, Third Republic (square lattices) and Alternate USA, Orient
 Express, Southern Pacific (non-square, orientations anchored by the
 record extent word).
 
+## Measured row pitch anchors the headerless width
+
+For headerless maps, `terrain::measure_pitch` locates the largest
+height-dense span (4 KiB windows ≥ 12% land-magnitude values within
+the first 3 MiB), measures the dominant row pitch by lag
+autocorrelation over the observed `(w+2)`-cell candidates, and accepts
+it only when the winner is clearly separated (score ≤ 60% of the
+runner-up). The measured width joins the record-anchored height, and
+that single geometry then faces the same strict window validation;
+a measured pitch that fails validation **ends the ladder** — the
+fixed-geometry candidate never runs after the map has spoken
+(`terrain::scan_headerless`).
+
+Funnel outcomes across the 27 current headerless maps (authoritative
+enumeration via the library):
+
+- measured and validated (2): Tex-Mex (512×576, `−121…2608 m` —
+  Sierra Madre west, plains east) and Chicago to New York (640×512,
+  `−13…1952 m` — the Appalachian diagonal).
+- measured but no window validates (5): Britain (256×512), British
+  Isles (256×512), Coast to Coast (1024×640), Germantown (448×576),
+  South East Australia (256×384) — their spans are most plausibly
+  non-terrain data with a coincidental pitch.
+- no measurable pitch (20): none of them lack a height-dense span —
+  nine scored zero lag candidates (too little land-pair data for the
+  autocorrelation, so separation was never tested) and eleven failed
+  the separation threshold.
+
+The legacy 9610 map Pacific Coastal also measures (320×832) and
+validates — a first data point that the raw-row layout reaches the
+legacy format too (not claimed beyond that).
+
 ## Candidate windows (not established as terrain)
 
 One further window validates on a **headerless** map whose record
@@ -110,15 +142,17 @@ mangled reads.
 
 ## Open
 
-- **32 of 40 maps have no verified terrain decode.** Thirty-one maps
-  produce no validated window under their anchored geometry — five of
-  them despite a dims header (East Coast, Greenland Growing, Italy,
-  Mississippi Valley, New Beginnings). That is consistent with a
+- **30 of 40 maps have no grid decode** (verified or pitch-anchored).
+  Twenty-nine of them produce no validated window at all; the thirtieth
+  is the unestablished Central Pacific candidate window, which is not a
+  decode. Not all 29 were window-tested — the ladder scans no geometry
+  when the pitch is unmeasurable and the record height is not 256 —
+  but five did carry a dims header and their own anchored geometry and
+  still produced no window (East Coast, Greenland Growing, Italy,
+  Mississippi Valley, New Beginnings). That is
+  consistent with a
   second storage form, but the checks only establish what was not
-  found; the question is unresolved. Headerless maps now have a known
-  lattice height from the record word, but no known width — anchoring
-  the width (another record field, or a constrained search over the
-  height-anchored geometries) is the natural next step. For three window-less maps (Britain,
+  found; the question is unresolved. For three window-less maps (Britain,
   East Coast, Ireland) a separate whole-file f32-density scan also
   found no dense height-like spans. These checks do not establish how
   those maps store their heights — only what was not found. The
