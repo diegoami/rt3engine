@@ -128,9 +128,13 @@ symlink (including dangling links), and refuses to write inside the
 canonical installation root.
 Generated images stay in the gitignored working area; no original game
 bytes are embedded. These are terrain visualizations, not original-game
-renderings. Inspected outputs show California Island's diagonal island
-chain, Argentina's Andes on the western edge with plains east, and the
-recognizable north-up British Isles coastline.
+renderings. All 40 current maps were rendered and inspected in indexed
+contact sheets: every output shows coherent north-up geography with no
+blank, misaligned or transposed result. Examples include California
+Island's diagonal island chain, Argentina's Andes on the western edge
+with plains east, the British Isles coastline, Italy and Japan. Shared
+scenario geography (for example Britain/British Isles and France/Third
+Republic) renders consistently.
 
 ## Oracle corroboration (2026-11-23)
 
