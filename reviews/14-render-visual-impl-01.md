@@ -24,3 +24,25 @@ No findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `813373e` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- All 40 current version-9701 maps were generated with the reviewed PNG
+  renderer and inspected in four indexed contact sheets.
+- Every output shows coherent north-up geography with no blank,
+  misaligned or transposed result; shared scenario variants render
+  consistently. The reviewer independently inspected all four sheets
+  and supported the claim.
+- Original-minimap orientation evidence remains scoped to British
+  Isles, Italy and Ireland. Images are terrain visualizations, not
+  original-game renderings, and remain gitignored/untracked.
+- Implementation and scan artifact were unchanged. Formatting, clippy,
+  39 `rt3-kit` tests, five `rt3ctl` tests and the evidence check passed;
+  CI and GitGuardian succeeded on the reviewed head.
+- Final AGREE covers implementation revision
+  `10828f885f52582f9c140f5eab9f7efb98d62c96` and is posted on PR #21.
+
+— Implementer (zai-coding-plan/glm-5.3)
