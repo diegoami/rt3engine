@@ -1,14 +1,15 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; dims-driven grid decode, 8 verified
+Claim level: **framing proven; dims-driven grid decode, 5 verified
 maps**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 8 verified grids, 4 candidate windows, 13 with a
-dims header).
+(40 current maps: 5 verified grids — the square-lattice maps; 7
+candidate windows — 4 on headerless maps, 3 where both orientations
+validate; 13 with a dims header).
 
 ## Proven: save-path section framing
 
@@ -51,26 +52,34 @@ general. The coarse height grid layout — `(lattice+1)²` corner samples
 — is verified only on the 256-lattice Crossing the Alps; for the other
 lattices it is an unverified inference from that one map.
 
-## Proven: dims-driven raw f32 coarse grids (8 verified maps)
+## Proven: dims-driven raw f32 coarse grids (5 verified maps)
 
 The coarse heights are stored **uncompressed** as little-endian f32
 metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
 trailing cell (semantics open) — forming the `(lattice+1)²` corner
 grid, with the lattice read from each map's own `0x2ee2` dims header
-(`terrain::scan_with_dims`; non-square lattices try both orientations,
-the hit records the geometry used). Water is 0.0 or NaN. The scanner
-validates windows by value range, ≥5% land, ≤80% NaN, smoothness and
-≥10 m relief.
+(`terrain::scan_with_dims`). Non-square lattices evaluate both
+orientations; when both validate, the correct one cannot be
+distinguished and no verified result is claimed — the map falls back
+to the candidate path. The artifact records the rows/cols each hit
+was read with. Water is 0.0 or NaN. The scanner validates windows by
+value range, ≥5% land, ≤80% NaN, smoothness and ≥10 m relief;
+geometries too small for the sampler's probe lattice (< 33 cells per
+side) are rejected rather than mis-sampled.
 
 The row rule (`lattice+2` cells) is corroborated on two maps by
 independent evidence: Crossing the Alps (256-lattice; ASCII relief
 matches the in-game view captured from the oracle — median ≈ 564 m,
 p95 ≈ 1,448 m, max ≈ 2,344 m) and Germany (512-lattice; renders the
-expected relief, and the height-dense span `[0x8000..0x10a000)` is
-1,056,768 bytes ≈ 513 × 2,056 — the grid exactly). On that rule,
-eight maps scan to **verified** grids: Crossing the Alps, Germany,
-State of Germany, France, Third Republic, Orient Express, Southern
-Pacific, Alternate USA (lattices 256…1024×640; see the artifact).
+expected relief — central uplands, coastline, southern high ground —
+and its 4 KiB-windowed height-dense span `[0x8000..0x10a000)`
+(1,056,768 bytes) brackets the scanned grid: 513 × 2,056 =
+1,054,728 bytes at `0x89bc..0x10a1c4`, overlapping the span to within
+its 4 KiB windowing). On that rule, the square-lattice maps scan to **verified** grids:
+Crossing the Alps, Germany, State of Germany, France, Third Republic.
+The three non-square maps whose both orientations validate (Alternate
+USA, Orient Express, Southern Pacific) are recorded as candidates —
+orientation ambiguity is refused rather than guessed.
 
 ## Candidate windows (not established as terrain)
 
@@ -86,8 +95,9 @@ seafloor relief or a look-alike; unresolved.
 - **32 of 40 maps have no verified terrain decode.** Twenty-eight maps
   produce no validated window at all — five of them despite a dims
   header and their own geometry (East Coast, Greenland Growing, Italy,
-  Mississippi Valley, New Beginnings), which means the raw-row layout
-  is not the only storage form. For three window-less maps (Britain,
+  Mississippi Valley, New Beginnings). That is consistent with a
+  second storage form, but the checks only establish what was not
+  found; the question is unresolved. For three window-less maps (Britain,
   East Coast, Ireland) a separate whole-file f32-density scan also
   found no dense height-like spans. These checks do not establish how
   those maps store their heights — only what was not found. The

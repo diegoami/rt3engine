@@ -41,6 +41,12 @@ const MIN_LAND: f32 = 0.05;
 /// Validation samples every 4th row and column.
 const VALIDATION_STEP: usize = 4;
 
+/// Smallest grid the sampler supports: the probe needs 8 distinct rows
+/// and columns on the step-4 validation lattice (7·4+1 = 33 cells).
+/// Geometries below this floor are rejected by the scan rather than
+/// sampled out of bounds (review round 1, finding 2).
+const MIN_GRID_CELLS: usize = 8 * VALIDATION_STEP + 1;
+
 /// Stored-grid geometry for one lattice: `rows = h + 1` height rows of
 /// `cols = w + 1` cells, stored in `row_cells = w + 2`-cell rows (the
 /// extra cell trails each row; semantics open).
@@ -65,6 +71,12 @@ impl Geometry {
     /// no dims header.
     pub fn default_256() -> Geometry {
         Geometry::for_lattice(256, 256)
+    }
+
+    /// Whether the sampler's probe/validate lattices fit inside this
+    /// geometry without reading outside the window.
+    pub fn supported(&self) -> bool {
+        self.rows >= MIN_GRID_CELLS && self.cols >= MIN_GRID_CELLS
     }
 
     /// Total stored size of the grid in bytes.
@@ -380,6 +392,9 @@ fn refine_start(bytes: &[u8], hit: usize, geo: &Geometry) -> usize {
 /// is always validated (see the regression test for a land layout the
 /// probe's lattice cannot see).
 pub fn scan_all_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Vec<HeightGrid> {
+    if !geo.supported() {
+        return Vec::new();
+    }
     let mut out = Vec::new();
     let mut off = from & !3;
     while off + geo.grid_bytes() <= bytes.len() {
@@ -401,6 +416,9 @@ pub fn scan_all_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Vec<HeightGrid
 
 /// Scans for the first validated grid of the given geometry.
 pub fn scan_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Option<HeightGrid> {
+    if !geo.supported() {
+        return None;
+    }
     let mut off = from & !3;
     while off + geo.grid_bytes() <= bytes.len() {
         if !probe_rejects(bytes, off, geo)
@@ -416,17 +434,22 @@ pub fn scan_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Option<HeightGrid>
     None
 }
 
-/// Scans with the map's own dims-header geometry (either orientation
-/// for non-square lattices; the hit records which was used).
+/// Scans with the map's own dims-header geometry. For non-square
+/// lattices both orientations are evaluated; if both validate, the
+/// correct one cannot be distinguished and the result is reported as
+/// ambiguous (`None`) rather than guessed (review round 1, finding 1).
 pub fn scan_with_dims(bytes: &[u8], from: usize, dims: &TerrainDims) -> Option<HeightGrid> {
     let (w, h) = dims.lattice();
-    if let Some(g) = scan_geo(bytes, from, &Geometry::for_lattice(w, h)) {
-        return Some(g);
+    let first = scan_geo(bytes, from, &Geometry::for_lattice(w, h));
+    if w == h {
+        return first;
     }
-    if w != h {
-        return scan_geo(bytes, from, &Geometry::for_lattice(h, w));
+    let second = scan_geo(bytes, from, &Geometry::for_lattice(h, w));
+    match (first, second) {
+        (Some(g), None) | (None, Some(g)) => Some(g),
+        (None, None) => None,
+        (Some(_), Some(_)) => None, // ambiguous orientation
     }
-    None
 }
 
 /// Scans with the default (256-lattice) geometry: the scan used for
@@ -495,6 +518,59 @@ mod tests {
         let g = scan_geo(&d, 0x3000, &geo).expect("512-lattice grid found");
         assert_eq!(g.offset, base);
         assert_eq!((g.rows, g.cols), (513, 513));
+    }
+
+    /// Regression (review round 1, finding 1): when a dims header names
+    /// a non-square lattice and BOTH orientations validate, the correct
+    /// one cannot be distinguished — scan_with_dims must refuse rather
+    /// than return a wrong-orientation hit as verified.
+    #[test]
+    fn ambiguous_orientation_is_refused() {
+        // A linear height ramp validates under any row pitch, so a
+        // (512,128) header over ramp data yields hits under BOTH
+        // orientations — scan_with_dims must refuse the ambiguity
+        // rather than return one as verified.
+        let ramp_cells = 80_000usize; // > max window of either geometry
+        let mut file = vec![0x7Fu8; 0x4000 + ramp_cells * 4 + 0x200];
+        for i in 0..ramp_cells {
+            let v = i as f32 * 0.001; // smooth under any pitch, relief ~80 m
+            let o = 0x4000 + i * 4;
+            file[o..o + 4].copy_from_slice(&v.to_le_bytes());
+        }
+        let hdr_at = 0x4000 + ramp_cells * 4 + 0x40;
+        file[hdr_at..hdr_at + 4].copy_from_slice(&0x2EE2u32.to_le_bytes());
+        for (i, v) in [32u32, 32, 32, 32, 512, 128, 2048, 512, 0]
+            .into_iter()
+            .enumerate()
+        {
+            let o = hdr_at + 4 + 4 * i;
+            file[o..o + 4].copy_from_slice(&v.to_le_bytes());
+        }
+        let o = hdr_at + 40;
+        file[o..o + 4].copy_from_slice(&0x2EE3u32.to_le_bytes());
+        let dims = read_dims(&file).expect("dims header parses");
+        assert_eq!(dims.lattice(), (512, 128));
+        assert!(
+            scan_with_dims(&file, 0x3000, &dims).is_none(),
+            "ambiguity must be refused"
+        );
+        // Each orientation alone validates on the ramp.
+        assert!(scan_geo(&file, 0x3000, &Geometry::for_lattice(512, 128)).is_some());
+        assert!(scan_geo(&file, 0x3000, &Geometry::for_lattice(128, 512)).is_some());
+    }
+
+    /// Regression (review round 1, finding 2): geometries too small for
+    /// the probe lattice are rejected outright, so the probe can never
+    /// sample outside the window the validator checks.
+    #[test]
+    fn rejects_unsupported_small_geometry() {
+        let tiny = Geometry::for_lattice(27, 27);
+        assert!(!tiny.supported());
+        // A window full of valid heights under a tiny geometry: refused
+        // (no verified claim), not mis-sampled.
+        let (d, _) = fixture_lattice(256, 256);
+        assert!(scan_geo(&d, 0x3000, &tiny).is_none());
+        assert!(scan_all_geo(&d, 0x3000, &tiny).is_empty());
     }
 
     #[test]

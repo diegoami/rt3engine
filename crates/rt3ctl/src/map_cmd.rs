@@ -227,7 +227,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
     struct Row {
         name: String,
         dims: Option<terrain::TerrainDims>,
-        grid: Option<(usize, usize, usize, f32, f32)>,
+        grid: Option<(usize, usize, usize, f32, f32, usize, usize)>,
         status: Option<&'static str>,
         missed: Option<&'static str>,
     }
@@ -251,7 +251,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         let scanned = scan_map(&bytes);
         let grid = scanned.as_ref().map(|(g, _)| {
             let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
-            (g.offset, g.nan_cells, g.zero_cells, lo, hi)
+            (g.offset, g.nan_cells, g.zero_cells, lo, hi, g.rows, g.cols)
         });
         let status = scanned.as_ref().map(|(_, kind)| kind.as_str());
         let missed = grid.is_none().then_some("no validated grid");
@@ -282,8 +282,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             let grid = match &r.grid {
-                Some((off, nan, zero, lo, hi)) => format!(
-                    "{{\"grid_offset\": {off}, \"nan_cells\": {nan}, \"zero_cells\": {zero}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}}"
+                Some((off, nan, zero, lo, hi, rows, cols)) => format!(
+                    "{{\"grid_offset\": {off}, \"rows\": {rows}, \"cols\": {cols}, \"nan_cells\": {nan}, \"zero_cells\": {zero}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}}"
                 ),
                 None => "null".to_string(),
             };
