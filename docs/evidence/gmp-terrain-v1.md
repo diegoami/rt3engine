@@ -121,7 +121,10 @@ enumeration via the library):
   Isles (256×512), Coast to Coast (1024×640), Germantown (448×576),
   South East Australia (256×384) — their spans are most plausibly
   non-terrain data with a coincidental pitch.
-- no measurable pitch (20): span missing or separation refused.
+- no measurable pitch (20): none of them lack a height-dense span —
+  nine scored zero lag candidates (too little land-pair data for the
+  autocorrelation, so separation was never tested) and eleven failed
+  the separation threshold.
 
 The legacy 9610 map Pacific Coastal also measures (320×832) and
 validates — a first data point that the raw-row layout reaches the
@@ -139,11 +142,13 @@ mangled reads.
 
 ## Open
 
-- **29 of 40 maps have no grid decode** (verified, pitch-anchored or
-  candidate). Twenty-nine maps produce no validated window under their
-  anchored geometry — five of
-  them despite a dims header (East Coast, Greenland Growing, Italy,
-  Mississippi Valley, New Beginnings). That is consistent with a
+- **30 of 40 maps have no grid decode** (verified or pitch-anchored).
+  Twenty-nine of them produce no validated window at all under their
+  anchored geometry — the thirtieth is the unestablished Central
+  Pacific candidate window, which is not a decode. Five of the 29
+  produce no window despite a dims header (East Coast, Greenland
+  Growing, Italy, Mississippi Valley, New Beginnings). That is
+  consistent with a
   second storage form, but the checks only establish what was not
   found; the question is unresolved. For three window-less maps (Britain,
   East Coast, Ireland) a separate whole-file f32-density scan also
