@@ -1,26 +1,21 @@
 //! Terrain heightfield extraction from `.gmp` maps (milestone 3b — see
 //! `docs/evidence/gmp-terrain-v1.md`).
 //!
-//! Proven so far (claim level **decode — dims-driven, render-corroborated
-//! on two maps**):
+//! Proven so far (claim level **framed decode on all 40 current maps**):
 //!
 //! ```text
-//! the coarse heights are stored uncompressed as f32 in
-//! (lattice+2)-cell rows: (lattice+1) height cells + 1 trailing cell
-//! (semantics open), forming the (lattice+1)² corner grid over the
-//! terrain lattice. Verified on Crossing the Alps (lattice 256×256,
-//! matches the oracle's in-game render) and Germany (512×512, renders
-//! the expected relief); the lattice comes from each map's own
-//! `0x2ee2` dims header when present.
+//! 0x32dd, 0x2ee2, 11001, 3002, cols, rows, 11002, 11004
+//! then uncompressed little-endian f32 heights at frame + 32.
+//! `cols` and `rows` are the (lattice+1) corner dimensions; each
+//! stored row has cols+1 cells (one trailing cell, semantics open).
 //! ```
 //!
-//! Maps without a dims header get their lattice height from the record
-//! extent word and their width from a measured row pitch (see
-//! `measure_pitch`); hits at that geometry are *pitch-anchored*. Only
-//! when no pitch can be measured does the fixed 256-lattice geometry
-//! run as a plain candidate, and only when the record anchors the
-//! height at 256. Water is `0.0` in some maps and `NaN` in others;
-//! both are accepted. The scan validates windows by
+//! `read_framed` is the preferred path: the frame determines the exact
+//! start and geometry, and the result passes sampled validation and a
+//! full-cell range check. The older nine-word dims header, record
+//! extent word, measured row pitch and fixed-256 candidate remain as
+//! fallbacks for unframed inputs. Water is `0.0` in some maps and `NaN`
+//! in others; both are accepted. Fallback scans validate windows by
 //! value range, land fraction and row-to-row smoothness, so
 //! all-`0x00`/all-`0xFF` filler (which reads as `0.0`/NaN floats) is
 //! rejected.
@@ -93,9 +88,10 @@ impl Geometry {
     }
 }
 
-/// Terrain section dims header: nine u32s after tag `0x2EE2`, present
-/// in a subset of shipped maps (the others frame terrain differently;
-/// see the evidence doc). The observed groupings are tiles, tiles,
+/// Older terrain dims header: nine u32s after tag `0x2EE2`, present
+/// in 13 shipped maps. The explicit 32-byte coarse-grid frame read by
+/// `read_framed` is preferred on all 40 current maps. The older
+/// observed groupings are tiles, tiles,
 /// lattice, lattice×4 (e.g. Alps: 64,64,64,64,256,256,1024,1024,0 —
 /// coarse corner grid 257×257 over the 256 lattice, 1024×1024 fine
 /// grid).
@@ -391,6 +387,42 @@ fn extract(bytes: &[u8], off: usize, geo: &Geometry) -> Option<HeightGrid> {
     })
 }
 
+/// Reads the explicitly framed coarse grid, when present. The terrain
+/// section starts with `0x32dd`, `0x2ee2`, then six words
+/// `(11001, 3002, cols, rows, 11002, 11004)`; the f32 cells begin
+/// immediately after that 32-byte frame. All words are byte-aligned with
+/// the section, which need not be 0 mod 4 in the file.
+pub fn read_framed(bytes: &[u8]) -> Option<HeightGrid> {
+    let mut off = 0x3000usize.min(bytes.len());
+    while off + 32 <= bytes.len() {
+        let word =
+            |delta| u32::from_le_bytes(bytes[off + delta..off + delta + 4].try_into().unwrap());
+        if word(0) == 0x32dd
+            && word(4) == 0x2ee2
+            && word(8) == 11001
+            && word(12) == 3002
+            && word(24) == 11002
+            && word(28) == 11004
+        {
+            let cols = word(16) as usize;
+            let rows = word(20) as usize;
+            if (MIN_GRID_CELLS..=8193).contains(&rows) && (MIN_GRID_CELLS..=8193).contains(&cols) {
+                let geo = Geometry {
+                    rows,
+                    cols,
+                    row_cells: cols + 1,
+                };
+                let start = off + 32;
+                if start + geo.grid_bytes() <= bytes.len() && validate(bytes, start, &geo) {
+                    return extract(bytes, start, &geo);
+                }
+            }
+        }
+        off += 1;
+    }
+    None
+}
+
 /// After a hit, walks back one row at a time while the window still
 /// validates, so a grid entered mid-way is reported from its first
 /// row. Zero padding that blends into leading water rows is
@@ -546,7 +578,9 @@ pub enum HeaderlessHit {
     Candidate,
 }
 
-/// Scans a headerless map through the refusal ladder:
+/// Scans an explicitly unframed map through the refusal ladder. Current
+/// callers should try `read_framed` first; this is the fallback for maps
+/// without that section header.
 ///
 /// 1. record height (no usable record word — no result);
 /// 2. measured pitch — the pitched geometry is scanned and, if it does
@@ -896,6 +930,29 @@ mod tests {
     }
 
     #[test]
+    fn framed_grid_uses_exact_section_start() {
+        let (mut d, base) = fixture_lattice(256, 256);
+        let marker = base - 32;
+        for (off, value) in [
+            (marker, 0x32ddu32),
+            (marker + 4, 0x2ee2),
+            (marker + 8, 11001),
+            (marker + 12, 3002),
+            (marker + 16, 257),
+            (marker + 20, 257),
+            (marker + 24, 11002),
+            (marker + 28, 11004),
+        ] {
+            d[off..off + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        let g = read_framed(&d).expect("framed grid");
+        assert_eq!(g.offset, base);
+        assert_eq!((g.rows, g.cols), (257, 257));
+        d[marker + 28..marker + 32].copy_from_slice(&0u32.to_le_bytes());
+        assert!(read_framed(&d).is_none(), "bad framing must be refused");
+    }
+
+    #[test]
     fn rejects_zero_filler() {
         let d = vec![0u8; 0x4000 + GRID_BYTES + 16];
         assert!(scan(&d, 0x3000).is_none());
@@ -1066,6 +1123,27 @@ mod tests {
             path.display()
         );
         assert_eq!(hits[0].offset % 4, 2, "first hit must keep Italy's residue");
+    }
+
+    /// The fixed-256 candidate used to start 30 floats before
+    /// California's real frame; the framed reader must land exactly after
+    /// the section header instead.
+    #[test]
+    fn reads_california_framed_grid() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed frame check");
+            return;
+        };
+        let path = std::path::Path::new(&home).join("maps/California Island.gmp");
+        let Ok(bytes) = fs::read(&path) else {
+            eprintln!("{} missing; skipping", path.display());
+            return;
+        };
+        let g = read_framed(&bytes).expect("California framed grid");
+        assert_eq!(g.offset, 0x847b);
+        assert_eq!((g.rows, g.cols), (257, 257));
+        let (lo, hi) = g.height_range().unwrap();
+        assert_eq!((lo, hi), (-454.0, 3_051.079_8));
     }
 
     /// Install-backed check for the headerless pitch-anchored path

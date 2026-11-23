@@ -181,11 +181,10 @@ fn terrain_paths(root: &std::path::Path) -> Vec<(String, PathBuf)> {
     out
 }
 
-/// A hit counts as *verified* when it was scanned with the geometry
-/// read from the map's own dims header (rows = lattice+2 cells — the
-/// rule proven on Crossing the Alps and Germany); a hit from the fixed
-/// 256-lattice geometry on a headerless map is a *candidate* (the
-/// geometry is guessed, not read from the map).
+/// A hit counts as *verified* when its exact start and geometry come
+/// from the map's explicit terrain frame, or when it was scanned with
+/// the geometry read from its older dims header. A hit from the fixed
+/// 256-lattice geometry without either frame is a *candidate*.
 #[derive(Clone, Copy, PartialEq)]
 enum HitKind {
     Verified,
@@ -204,13 +203,16 @@ impl HitKind {
 }
 
 /// Scans one map. The status ladder:
-/// - **verified**: header-bearing maps, geometry from their own
-///   record-anchored dims header.
-/// - **pitch-anchored** / **candidate**: the headerless refusal ladder
+/// - **verified**: exact start and geometry from the explicit terrain
+///   frame, or geometry from the older record-anchored dims header.
+/// - **pitch-anchored** / **candidate**: the unframed refusal ladder
 ///   (`terrain::scan_headerless`) — a measured pitch that fails
 ///   validation ends the ladder; the fixed-256 candidate runs only
 ///   with no measurable pitch and a record height of 256.
 fn scan_map(bytes: &[u8]) -> Option<(terrain::HeightGrid, HitKind)> {
+    if let Some(g) = terrain::read_framed(bytes) {
+        return Some((g, HitKind::Verified));
+    }
     if let Some(dims) = terrain::read_dims(bytes) {
         return terrain::scan_with_dims(bytes, 0x3000, &dims).map(|g| (g, HitKind::Verified));
     }
