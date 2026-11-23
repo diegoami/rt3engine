@@ -50,3 +50,25 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `97f5615` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- Original-picker lattice checks are recorded for six maps: five
+  pitch-anchored plus East Coast; the other 21 pitch-anchored maps remain
+  explicitly open.
+- Vertical-flip minimap comparisons establish south-to-north stored rows
+  on British Isles, Italy and Ireland, with scores, method and limitations
+  recorded; no unchecked-map generalization was made.
+- Ireland loaded from unmodified bytes under the documented oracle-only
+  filename substitution; Argentina was restored by an exit trap and
+  verified byte-for-byte with `cmp`.
+- Decoder and artifact remained unchanged. Formatting, clippy, 34
+  `rt3-kit` tests, three `rt3ctl` tests and the evidence check passed;
+  CI and GitGuardian succeeded on the reviewed head.
+- Final AGREE covers implementation revision
+  `d91f2fee10544d2206c2d27cda877d37c4d8edab` and is posted on PR #17.
+
+— Implementer (zai-coding-plan/glm-5.3)
