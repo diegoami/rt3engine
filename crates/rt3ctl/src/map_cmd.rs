@@ -206,22 +206,21 @@ impl HitKind {
 /// Scans one map. The status ladder:
 /// - **verified**: header-bearing maps, geometry from their own
 ///   record-anchored dims header.
-/// - **pitch-anchored**: headerless maps whose height comes from the
-///   record word and whose width comes from a clearly separated
-///   measured row pitch.
-/// - **candidate**: the fixed 256-lattice geometry, only when the
-///   record anchors the height at 256 and no pitch was measurable.
+/// - **pitch-anchored** / **candidate**: the headerless refusal ladder
+///   (`terrain::scan_headerless`) — a measured pitch that fails
+///   validation ends the ladder; the fixed-256 candidate runs only
+///   with no measurable pitch and a record height of 256.
 fn scan_map(bytes: &[u8]) -> Option<(terrain::HeightGrid, HitKind)> {
     if let Some(dims) = terrain::read_dims(bytes) {
         return terrain::scan_with_dims(bytes, 0x3000, &dims).map(|g| (g, HitKind::Verified));
     }
-    if let Some(g) = terrain::scan_pitch_anchored(bytes, 0x3000) {
-        return Some((g, HitKind::PitchAnchored));
-    }
-    match terrain::lattice_h_from_record(bytes) {
-        Some(256) | None => terrain::scan(bytes, 0x3000).map(|g| (g, HitKind::Candidate)),
-        Some(_) => None,
-    }
+    terrain::scan_headerless(bytes, 0x3000).map(|(g, kind)| {
+        let kind = match kind {
+            terrain::HeaderlessHit::PitchAnchored => HitKind::PitchAnchored,
+            terrain::HeaderlessHit::Candidate => HitKind::Candidate,
+        };
+        (g, kind)
+    })
 }
 
 fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {

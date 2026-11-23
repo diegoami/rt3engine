@@ -508,15 +508,36 @@ pub fn measure_pitch(bytes: &[u8]) -> Option<(usize, f32, f32)> {
     }
 }
 
-/// Scans a headerless map with the record-anchored height and the
-/// measured pitch width. Returns the grid when that one geometry
-/// validates (the pitch separation requirement is part of
-/// `measure_pitch`).
-pub fn scan_pitch_anchored(bytes: &[u8], from: usize) -> Option<HeightGrid> {
+/// How a headerless map's hit geometry was established.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HeaderlessHit {
+    /// Height from the record word, width from a clearly separated
+    /// measured pitch, window validated at exactly that geometry.
+    PitchAnchored,
+    /// No pitch measurable and the record anchors the height at 256:
+    /// the fixed 256-lattice guess.
+    Candidate,
+}
+
+/// Scans a headerless map through the refusal ladder:
+///
+/// 1. record height (no usable record word — no result);
+/// 2. measured pitch — the pitched geometry is scanned and, if it does
+///    not validate, the ladder **stops**: no fallback to a guessed
+///    geometry after the map has spoken;
+/// 3. only with no measurable pitch and a record height of exactly 256
+///    does the fixed-geometry candidate run.
+pub fn scan_headerless(bytes: &[u8], from: usize) -> Option<(HeightGrid, HeaderlessHit)> {
     let h = lattice_h_from_record(bytes)?;
-    let (row_cells, _win, _run) = measure_pitch(bytes)?;
-    let w = row_cells.checked_sub(2)?;
-    scan_geo(bytes, from, &Geometry::for_lattice(w, h))
+    if let Some((row_cells, _win, _run)) = measure_pitch(bytes) {
+        let w = row_cells.checked_sub(2)?;
+        return scan_geo(bytes, from, &Geometry::for_lattice(w, h))
+            .map(|g| (g, HeaderlessHit::PitchAnchored));
+    }
+    if h == 256 {
+        return scan(bytes, from).map(|g| (g, HeaderlessHit::Candidate));
+    }
+    None
 }
 
 /// Scans for validated grids of the given geometry, 4-byte aligned,
@@ -776,9 +797,27 @@ mod tests {
         let (row_cells, win, run) = measure_pitch(&d).expect("pitch measured");
         assert_eq!(row_cells, 514);
         assert!(win <= run * 0.6, "separation win={win} run={run}");
-        let g = scan_pitch_anchored(&d, 0x3000).expect("pitch-anchored scan finds the grid");
+        let (g, kind) = scan_headerless(&d, 0x3000).expect("ladder finds the grid");
+        assert_eq!(kind, HeaderlessHit::PitchAnchored);
         assert_eq!(g.offset, base);
         assert_eq!((g.rows, g.cols), (577, 513));
+    }
+
+    /// A record height of 256 with a measured width of 512 must report
+    /// the pitch-anchored hit, never the fixed-256 candidate (the
+    /// ladder stops once the pitch has spoken). Without a usable
+    /// record word there is no result at all.
+    #[test]
+    fn ladder_never_guesses_after_a_pitch() {
+        let (mut d, base) = fixture_lattice(512, 256);
+        d[12..16].copy_from_slice(&(256u32 * 256).to_le_bytes());
+        let (g, kind) = scan_headerless(&d, 0x3000).expect("pitch-anchored hit");
+        assert_eq!(kind, HeaderlessHit::PitchAnchored);
+        assert_eq!((g.rows, g.cols), (257, 513));
+        assert_eq!(g.offset, base);
+        // No record word (filler bytes): the ladder cannot even start.
+        let (d2, _) = fixture_lattice(512, 256);
+        assert!(scan_headerless(&d2, 0x3000).is_none());
     }
 
     #[test]
@@ -947,8 +986,9 @@ mod tests {
                 "{}",
                 path.display()
             );
-            let g = scan_pitch_anchored(&bytes, 0x3000)
+            let (g, kind) = scan_headerless(&bytes, 0x3000)
                 .unwrap_or_else(|| panic!("no pitch-anchored grid in {}", path.display()));
+            assert_eq!(kind, HeaderlessHit::PitchAnchored, "{}", path.display());
             assert_eq!((g.cols - 1, g.rows - 1), lattice, "{}", path.display());
             let (lo, hi) = g.height_range().unwrap();
             assert!(
