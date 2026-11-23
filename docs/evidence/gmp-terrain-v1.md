@@ -1,14 +1,14 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; one verified grid decode**. Established
-2026-11-22, milestone 3b, issues
+Claim level: **framing proven; dims-driven grid decode, 8 verified
+maps**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 1 verified grid — Crossing the Alps, 11 candidate
-windows, 13 with a dims header).
+(40 current maps: 8 verified grids, 4 candidate windows, 13 with a
+dims header).
 
 ## Proven: save-path section framing
 
@@ -51,50 +51,50 @@ general. The coarse height grid layout — `(lattice+1)²` corner samples
 — is verified only on the 256-lattice Crossing the Alps; for the other
 lattices it is an unverified inference from that one map.
 
-## Proven: raw f32 coarse grid on Crossing the Alps
+## Proven: dims-driven raw f32 coarse grids (8 verified maps)
 
-`terrain::scan` locates the coarse heightfield where it is stored
-**uncompressed**, as little-endian f32 metres in 1,032-byte rows — 257
-height cells plus one trailing cell (semantics open) — forming the
-257×257 corner grid of the 256-lattice. Water is 0.0 or NaN. The
-scanner validates windows by value range, ≥5% land, ≤80% NaN,
-smoothness and ≥10 m relief; `rt3ctl map terrain "Crossing the
-Alps"` renders the ASCII relief — alpine statistics median ≈ 564 m,
-p95 ≈ 1,448 m, max ≈ 2,344 m, visually matching the in-game view
-captured from the oracle the same session. This is the one map where
-the scan hit is **verified**: its own dims header reads lattice
-256×256, the only lattice for which the scanner's fixed window
-geometry is known to read a rectilinear subwindow of the parent grid.
+The coarse heights are stored **uncompressed** as little-endian f32
+metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
+trailing cell (semantics open) — forming the `(lattice+1)²` corner
+grid, with the lattice read from each map's own `0x2ee2` dims header
+(`terrain::scan_with_dims`; non-square lattices try both orientations,
+the hit records the geometry used). Water is 0.0 or NaN. The scanner
+validates windows by value range, ≥5% land, ≤80% NaN, smoothness and
+≥10 m relief.
+
+The row rule (`lattice+2` cells) is corroborated on two maps by
+independent evidence: Crossing the Alps (256-lattice; ASCII relief
+matches the in-game view captured from the oracle — median ≈ 564 m,
+p95 ≈ 1,448 m, max ≈ 2,344 m) and Germany (512-lattice; renders the
+expected relief, and the height-dense span `[0x8000..0x10a000)` is
+1,056,768 bytes ≈ 513 × 2,056 — the grid exactly). On that rule,
+eight maps scan to **verified** grids: Crossing the Alps, Germany,
+State of Germany, France, Third Republic, Orient Express, Southern
+Pacific, Alternate USA (lattices 256…1024×640; see the artifact).
 
 ## Candidate windows (not established as terrain)
 
-The scanner validates eleven further windows (see
-`terrain-scan-v1.json`, `"status": "candidate"`). Four of them are on
-maps without a dims header (Central Pacific, Chicago to New York,
-Dutchlantis, Tex-Mex); seven are on maps whose lattice is wider than
-256 (Germany 512, France 448, Alternate USA 1024×640, Orient Express
-576×384, Southern Pacific 1024×384, State of Germany 512, Third
-Republic 448), where a 257-wide window with a fixed 1,032-byte row
-stride cannot be a rectilinear subwindow of a row-major parent grid —
-so whatever these windows contain, the current extraction does not
-demonstrate their layout. Central Pacific and Dutchlantis also scan
-to all-negative ranges (−145…0 m, −150…0 m). These windows are
-recorded as leads for the next decode step, not as decoded terrain.
+Four further windows validate on maps **without a dims header**
+(Central Pacific, Chicago to New York, Dutchlantis, Tex-Mex), scanned
+with the fixed 256-lattice geometry — the geometry is guessed, not
+read from the map, so these stay candidates. Central Pacific and
+Dutchlantis scan to all-negative ranges (−145…0 m, −150…0 m) —
+seafloor relief or a look-alike; unresolved.
 
 ## Open
 
-- **39 of 40 maps have no verified terrain decode.** 28 maps produce
-  no validated window at all; for three of them (Britain, East Coast,
-  Ireland) a separate whole-file f32-density scan also found no dense
-  height-like spans. These checks do not establish how those maps store
-  their heights — only that this scanner's gates and (on three maps) a
-  density sweep found nothing; the storage remains unknown. The 11
-  candidate windows above await a layout demonstration (per-map row
-  pitch from the dims header) or in-game corroboration. The per-tile
-  records (`0x2f43`/`0x2f44`, writer `0x0042b4a0` — 33-ish short arrays
-  per tile) and the quadtree levels (`0x00517d90`) are candidate
-  carriers; the read-side decoder is unidentified (the loader function
-  is still unknown — only the save path is mapped).
+- **32 of 40 maps have no verified terrain decode.** Twenty-eight maps
+  produce no validated window at all — five of them despite a dims
+  header and their own geometry (East Coast, Greenland Growing, Italy,
+  Mississippi Valley, New Beginnings), which means the raw-row layout
+  is not the only storage form. For three window-less maps (Britain,
+  East Coast, Ireland) a separate whole-file f32-density scan also
+  found no dense height-like spans. These checks do not establish how
+  those maps store their heights — only what was not found. The
+  per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0` — 33-ish
+  short arrays per tile) and the quadtree levels (`0x00517d90`) are
+  candidate carriers; the read-side decoder is unidentified (the
+  loader function is still unknown — only the save path is mapped).
 - The trailing cell per row; which validated window is canonical when
   several fit (zero padding blends into leading water rows).
 - The 27 maps without a `0x2ee2` dims header — their terrain framing
