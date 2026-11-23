@@ -26,3 +26,25 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `00202e2` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- Original-picker size labels were captured for all 26 pitch-anchored
+  maps plus California Island; 27/27 visual reads match the decoded
+  lattice artifact with no mismatches.
+- Every substitution was SHA-256 checked against its source. Argentina
+  was restored by an exit trap and `cmp`-verified; no oracle process
+  remains and the GOG installation was untouched.
+- California remains a candidate: its 256×256 geometry is confirmed,
+  but its candidate height window is not established as terrain.
+- Orientation evidence remains scoped to British Isles, Italy and
+  Ireland. Decoder behavior and generated artifacts are unchanged.
+- Formatting, clippy, 34 `rt3-kit` tests, three `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `8d00b888de9d68ec74647d20aa49f2d975df43bc` and is posted on PR #18.
+
+— Implementer (zai-coding-plan/glm-5.3)
