@@ -14,10 +14,13 @@
 //! `0x2ee2` dims header when present.
 //! ```
 //!
-//! Maps without a dims header are scanned with the fixed 256-lattice
-//! geometry and their hits are recorded as candidates (the geometry is
-//! guessed, not read from the map). Water is `0.0` in some maps and
-//! `NaN` in others; both are accepted. The scan validates windows by
+//! Maps without a dims header get their lattice height from the record
+//! extent word and their width from a measured row pitch (see
+//! `measure_pitch`); hits at that geometry are *pitch-anchored*. Only
+//! when no pitch can be measured does the fixed 256-lattice geometry
+//! run as a plain candidate, and only when the record anchors the
+//! height at 256. Water is `0.0` in some maps and `NaN` in others;
+//! both are accepted. The scan validates windows by
 //! value range, land fraction and row-to-row smoothness, so
 //! all-`0x00`/all-`0xFF` filler (which reads as `0.0`/NaN floats) is
 //! rejected.
@@ -402,6 +405,120 @@ fn refine_start(bytes: &[u8], hit: usize, geo: &Geometry) -> usize {
     off
 }
 
+/// Candidate row pitches: `w + 2` cells for every lattice width
+/// observed in shipped maps plus small reserves.
+const PITCH_CANDIDATES: [usize; 12] = [130, 178, 258, 322, 386, 450, 514, 578, 642, 770, 834, 1026];
+
+/// Largest region searched for the height-dense span.
+const PITCH_SEARCH_LIMIT: usize = 0x30_0000;
+/// Land-magnitude density a 4 KiB window needs to join the span.
+const PITCH_SPAN_DENSITY: f32 = 0.12;
+
+fn is_land_like(v: f32) -> bool {
+    v.is_finite() && (MIN_LAND..=MAX_HEIGHT).contains(&v) || (-MAX_HEIGHT..=-MIN_LAND).contains(&v)
+}
+
+/// Finds the largest height-dense span (4 KiB windows at ≥
+/// `PITCH_SPAN_DENSITY` land-like values) within the first
+/// `PITCH_SEARCH_LIMIT` bytes. Returns `(lo, hi)`.
+fn densest_span(bytes: &[u8]) -> Option<(usize, usize)> {
+    let end = bytes.len().min(PITCH_SEARCH_LIMIT);
+    let mut best: Option<(usize, usize)> = None;
+    let mut cur: Option<(usize, usize)> = None;
+    let mut off = 0x3000;
+    while off + 4096 <= end {
+        let mut land = 0usize;
+        for i in 0..256 {
+            let o = off + i * 16; // every 4th float
+            if let Some(v) = cell(bytes, o) {
+                if is_land_like(v) {
+                    land += 1;
+                }
+            }
+        }
+        let hot = land as f32 / 256.0 >= PITCH_SPAN_DENSITY;
+        if hot {
+            cur = Some(match cur {
+                Some((lo, hi)) => (lo, hi + 4096),
+                None => (off, off + 4096),
+            });
+        } else if let Some(span) = cur.take() {
+            let better = best
+                .map(|(lo, hi)| span.1 - span.0 > hi - lo)
+                .unwrap_or(true);
+            if better {
+                best = Some(span);
+            }
+        }
+        off += 4096;
+    }
+    if let Some(span) = cur.take() {
+        let better = best
+            .map(|(lo, hi)| span.1 - span.0 > hi - lo)
+            .unwrap_or(true);
+        if better {
+            best = Some(span);
+        }
+    }
+    best
+}
+
+/// Measures the dominant row pitch inside the map's densest span by
+/// lag autocorrelation over the observed pitch candidates. Returns
+/// `(row_cells, winner_score, runner_up_score)` when at least two
+/// candidates scored and the winner is clearly separated (score ≤ 60%
+/// of the runner-up — the separation observed for real grids, e.g.
+/// Tex-Mex 10 vs 29 and Chicago to New York 10 vs 179).
+pub fn measure_pitch(bytes: &[u8]) -> Option<(usize, f32, f32)> {
+    let (lo, hi) = densest_span(bytes)?;
+    let n = (hi - lo) / 4;
+    let mut scores: Vec<(f32, usize)> = Vec::new();
+    for lag in PITCH_CANDIDATES {
+        if lag + 4 >= n {
+            continue;
+        }
+        let mut diff = 0.0f32;
+        let mut pairs = 0usize;
+        let mut i = 0usize;
+        while i + lag + 4 < n {
+            let a = cell(bytes, lo + i * 4);
+            let b = cell(bytes, lo + (i + lag) * 4);
+            if let (Some(a), Some(b)) = (a, b) {
+                if is_land_like(a) && is_land_like(b) {
+                    diff += (a - b).abs();
+                    pairs += 1;
+                }
+            }
+            i += 83; // prime stride over the span
+        }
+        if pairs > 40 {
+            scores.push((diff / pairs as f32, lag));
+        }
+    }
+    if scores.len() < 2 {
+        return None;
+    }
+    scores.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap());
+    let (win, lag) = scores[0];
+    let (run, _) = scores[1];
+    if run > 0.0 && win <= run * 0.6 {
+        Some((lag, win, run))
+    } else {
+        None
+    }
+}
+
+/// Scans a headerless map with the record-anchored height and the
+/// measured pitch width. Returns the grid when that one geometry
+/// validates (the pitch separation requirement is part of
+/// `measure_pitch`).
+pub fn scan_pitch_anchored(bytes: &[u8], from: usize) -> Option<HeightGrid> {
+    let h = lattice_h_from_record(bytes)?;
+    let (row_cells, _win, _run) = measure_pitch(bytes)?;
+    let w = row_cells.checked_sub(2)?;
+    scan_geo(bytes, from, &Geometry::for_lattice(w, h))
+}
+
 /// Scans for validated grids of the given geometry, 4-byte aligned,
 /// from `from`. The probe only ever rejects (see `probe_rejects`); no
 /// accept-side shortcut is taken — a window the validator would accept
@@ -648,6 +765,22 @@ mod tests {
         assert_eq!((g.rows, g.cols), (129, 513));
     }
 
+    /// The pitch funnel: a headerless (512,576)-lattice fixture with a
+    /// record word anchoring h=576 measures row pitch 514 and scans at
+    /// (512,576).
+    #[test]
+    fn pitch_anchors_headerless_width() {
+        let (mut d, base) = fixture_lattice(512, 576);
+        // record extent word: lattice_h × 256
+        d[12..16].copy_from_slice(&(576u32 * 256).to_le_bytes());
+        let (row_cells, win, run) = measure_pitch(&d).expect("pitch measured");
+        assert_eq!(row_cells, 514);
+        assert!(win <= run * 0.6, "separation win={win} run={run}");
+        let g = scan_pitch_anchored(&d, 0x3000).expect("pitch-anchored scan finds the grid");
+        assert_eq!(g.offset, base);
+        assert_eq!((g.rows, g.cols), (577, 513));
+    }
+
     #[test]
     fn rejects_zero_filler() {
         let d = vec![0u8; 0x4000 + GRID_BYTES + 16];
@@ -771,6 +904,53 @@ mod tests {
                 path.display(),
                 g.offset
             );
+            assert!(
+                lo >= -1000.0 && hi >= max_min && hi <= max_max,
+                "{}: range {}..{}",
+                path.display(),
+                lo,
+                hi
+            );
+        }
+    }
+
+    /// Install-backed check for the headerless pitch-anchored path
+    /// (record height + measured width). Self-skips without RT3_HOME.
+    #[test]
+    fn scans_pitch_anchored_reference_maps() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed pitch check");
+            return;
+        };
+        for (file, lattice, max_min, max_max) in [
+            (
+                "maps/Tex-Mex.gmp",
+                (512usize, 576usize),
+                2000.0f32,
+                2800.0f32,
+            ),
+            ("maps/Chicago to New York.gmp", (640, 512), 1500.0, 2100.0),
+        ] {
+            let path = std::path::Path::new(&home).join(file);
+            let Ok(bytes) = fs::read(&path) else {
+                eprintln!("{} missing; skipping", path.display());
+                return;
+            };
+            assert!(
+                read_dims(&bytes).is_none(),
+                "{}: expected no dims header",
+                path.display()
+            );
+            assert_eq!(
+                lattice_h_from_record(&bytes),
+                Some(lattice.1),
+                "{}",
+                path.display()
+            );
+            let g = scan_pitch_anchored(&bytes, 0x3000)
+                .unwrap_or_else(|| panic!("no pitch-anchored grid in {}", path.display()));
+            assert_eq!((g.cols - 1, g.rows - 1), lattice, "{}", path.display());
+            let (lo, hi) = g.height_range().unwrap();
             assert!(
                 lo >= -1000.0 && hi >= max_min && hi <= max_max,
                 "{}: range {}..{}",

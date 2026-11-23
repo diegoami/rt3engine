@@ -1,14 +1,14 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; dims-driven grid decode, 8 verified
-maps**. Established 2026-11-22/23, milestone 3b, issues
+Claim level: **framing proven; grid decode for 11 maps (8 verified,
+2 pitch-anchored)**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 8 verified grids, 1 candidate window, 31 with no
-grid; 13 with a dims header).
+(40 current maps: 8 verified grids, 2 pitch-anchored grids, 1
+candidate window, 29 with no grid; 13 with a dims header).
 
 ## Proven: save-path section framing
 
@@ -98,6 +98,24 @@ France, Third Republic (square lattices) and Alternate USA, Orient
 Express, Southern Pacific (non-square, orientations anchored by the
 record extent word).
 
+## Measured row pitch anchors the headerless width
+
+For headerless maps, `terrain::measure_pitch` locates the largest
+height-dense span (4 KiB windows ≥ 12% land-magnitude values within
+the first 3 MiB), measures the dominant row pitch by lag
+autocorrelation over the observed `(w+2)`-cell candidates, and accepts
+it only when the winner is clearly separated (score ≤ 60% of the
+runner-up — Tex-Mex 10 vs 29, Chicago to New York 10 vs 179). The
+measured width joins the record-anchored height, and that single
+geometry then faces the same strict window validation; survivors are
+**pitch-anchored** hits: Tex-Mex (512×576, `−121…2608 m` — Sierra
+Madre west, plains east) and Chicago to New York (640×512,
+`−13…1952 m` — the Appalachian diagonal). Three further maps measure a
+pitch but no window validates (Germantown, Britain, South East
+Australia — their spans are most plausibly non-terrain data with a
+coincidental pitch); the rest are refused on separation. Each stage
+refuses rather than guesses.
+
 ## Candidate windows (not established as terrain)
 
 One further window validates on a **headerless** map whose record
@@ -110,8 +128,9 @@ mangled reads.
 
 ## Open
 
-- **32 of 40 maps have no verified terrain decode.** Thirty-one maps
-  produce no validated window under their anchored geometry — five of
+- **29 of 40 maps have no grid decode** (verified, pitch-anchored or
+  candidate). Twenty-nine maps produce no validated window under their
+  anchored geometry — five of
   them despite a dims header (East Coast, Greenland Growing, Italy,
   Mississippi Valley, New Beginnings). That is consistent with a
   second storage form, but the checks only establish what was not
