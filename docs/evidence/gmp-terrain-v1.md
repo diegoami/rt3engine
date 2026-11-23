@@ -78,6 +78,51 @@ grid. Water is 0.0 or NaN. Windows validate by value range, ≥5% land,
 ≤80% NaN, smoothness and ≥10 m relief; geometries below the sampler's
 33-cell floor are rejected rather than mis-sampled.
 
+## Oracle corroboration (2026-11-23)
+
+The original executable's scenario/sandbox picker reports these lattice
+sizes, independently of the raw-grid scan:
+
+| Map | Decoded lattice | Original picker |
+|---|---:|---:|
+| British Isles | 320×512 | 320×512 |
+| Chicago to New York | 640×512 | 640×512 |
+| East Coast, USA | 320×256 | 320×256 |
+| Argentina Opens Up | 640×384 | 640×384 |
+| Central Pacific | 512×256 | 512×256 |
+| Ireland | 256×320 | 256×320 |
+
+All except East Coast are pitch-anchored. These are exact geometry
+confirmations, not independent checks of every height sample; the other
+21 pitch-anchored maps still lack picker confirmation.
+
+For British Isles, Italy and Ireland, the in-game minimap also
+corroborates row orientation. The comparison resized each decoded grid
+to its minimap with nearest neighbour, classified grid water as `0` or
+NaN and oracle water by its blue channel ordering (`B > G > R`), then
+tested all four axis-aligned reflections. A **vertical flip** — stored
+rows run south to north — was best on every map:
+
+| Map | Vertical flip | Next-best reflection |
+|---|---:|---:|
+| British Isles | 75.7% | 61.9% |
+| Italy | 76.0% | 65.4% |
+| Ireland | 77.2% | 73.5% |
+
+The scores measure water/land agreement; coast shading, cities and the
+camera rectangle limit them. They are corroboration on these three
+maps, not a general acceptance threshold or a row-order claim for maps
+not compared.
+
+Ireland was loaded under the sandbox's default Argentina filename in
+the writable oracle copy because the picker scroll widget did not
+respond to scripted input. The substituted file's SHA-256 matched
+Ireland's before launch; the picker reported 256×320 and the loaded
+game showed Ireland and Dublin. An exit trap restored Argentina, and a
+byte-for-byte comparison verified the restoration. No original
+installation file was modified. Every oracle session held the capture
+lock; screenshots and original bytes are not committed.
+
 ## Scan ladder and classification
 
 - **verified** (13): header-bearing maps, geometry from their own
@@ -114,6 +159,9 @@ that).
 
 ## Open
 
+- Picker geometry confirmation for the other 21 pitch-anchored maps;
+  minimap row-order comparison currently covers only British Isles,
+  Italy and Ireland.
 - Which validated window is canonical when several fit (zero padding
   blends into leading water rows); the trailing cell per row.
 - Per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0`) and
