@@ -750,6 +750,9 @@ mod tests {
                 2600.0f32,
             ),
             ("maps/Germany.gmp", (512, 512), 2000.0, 2400.0),
+            // Non-square lattice: orientation resolved by the record
+            // extent word (h = 640).
+            ("maps/Alternate USA.gmp", (1024, 640), 1500.0, 2100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {

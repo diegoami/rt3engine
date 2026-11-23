@@ -62,7 +62,7 @@ Greenland Growing 192). `terrain::lattice_h_from_record` reads it, and
 lattices (the header's `values[5]` is the height; both orientations
 validating no longer forces an ambiguity refusal when the anchor
 speaks). The word also gives the lattice height of every headerless
-map (256…832 across the 40), which suppresses fixed-geometry candidate
+map (256…768 across the 40 current maps), which suppresses fixed-geometry candidate
 windows on maps whose height is not 256 — reporting a known-wrong
 window would mislead.
 
@@ -72,11 +72,12 @@ The coarse heights are stored **uncompressed** as little-endian f32
 metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
 trailing cell (semantics open) — forming the `(lattice+1)²` corner
 grid, with the lattice read from each map's own `0x2ee2` dims header
-(`terrain::scan_with_dims`). Non-square lattices evaluate both
-orientations; when both validate, the correct one cannot be
-distinguished and no verified result is claimed — the map falls back
-to the candidate path. The artifact records the rows/cols each hit
-was read with. Water is 0.0 or NaN. The scanner validates windows by
+(`terrain::scan_with_dims`). The orientation of non-square lattices is
+anchored by the record extent word (see the law above); only when no
+anchor is available are both orientations evaluated, and when both
+validate without an anchor the result is refused rather than guessed.
+The artifact records the rows/cols each hit was read with. Water is
+0.0 or NaN. The scanner validates windows by
 value range, ≥5% land, ≤80% NaN, smoothness and ≥10 m relief;
 geometries too small for the sampler's probe lattice (< 33 cells per
 side) are rejected rather than mis-sampled.
@@ -91,12 +92,11 @@ and aligns with its 4 KiB-windowed height-dense span: the span
 (513 × 2,056 = 1,054,728 bytes) except for the grid's final 452
 bytes, which fall in the first 4 KiB window past the span — a window
 whose density fell below the scan's threshold, most plausibly the
-grid's low-relief trailing rows). On that rule, the square-lattice
-maps scan to **verified** grids:
-Crossing the Alps, Germany, State of Germany, France, Third Republic.
-The three non-square maps whose both orientations validate (Alternate
-USA, Orient Express, Southern Pacific) are recorded as candidates —
-orientation ambiguity is refused rather than guessed.
+grid's low-relief trailing rows). On that rule, eight maps scan to
+**verified** grids: Crossing the Alps, Germany, State of Germany,
+France, Third Republic (square lattices) and Alternate USA, Orient
+Express, Southern Pacific (non-square, orientations anchored by the
+record extent word).
 
 ## Candidate windows (not established as terrain)
 
@@ -110,7 +110,7 @@ mangled reads.
 
 ## Open
 
-- **31 of 40 maps have no verified terrain decode.** Thirty-one maps
+- **32 of 40 maps have no verified terrain decode.** Thirty-one maps
   produce no validated window under their anchored geometry — five of
   them despite a dims header (East Coast, Greenland Growing, Italy,
   Mississippi Valley, New Beginnings). That is consistent with a
@@ -129,7 +129,9 @@ mangled reads.
 - The trailing cell per row; which validated window is canonical when
   several fit (zero padding blends into leading water rows).
 - The 27 maps without a `0x2ee2` dims header — their terrain framing
-  differs (four of them still produce candidate windows).
+  differs (one of them, Central Pacific, still produces a candidate
+  window; three earlier candidates were withdrawn as known-wrong
+  geometry).
 - LOD decomposition beyond the coarse grid; legacy 9609/9610 layouts
   (their sections sit 2-mod-4 after the odd aux records).
 - The `0x407FC0 | k<<24` field at file+0x3008 (from
