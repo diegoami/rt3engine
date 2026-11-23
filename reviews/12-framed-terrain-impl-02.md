@@ -33,3 +33,26 @@ No new findings. The round-1 blocking finding is resolved.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `91332ca` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- `read_framed` parses the complete eight-word terrain frame at any byte
+  alignment, bounds geometry, validates at `section + 32` and extracts
+  every cell; the CLI prefers it while fallback APIs remain intact.
+- All 40 current maps reconcile against their structural frames and are
+  verified in the regenerated artifact. Previous starts were 84–96
+  bytes early; round-1 review caught Britain's 84-byte case and the
+  corrected range was verified in round 2.
+- California Island decodes at `0x847b` from its `0x845b` section and no
+  current candidate remains. Synthetic signature/refusal and exact
+  California regressions were observed failing before implementation.
+- Formatting, clippy, 36 `rt3-kit` tests, three `rt3ctl` tests and the
+  install-backed evidence check passed; CI and GitGuardian succeeded on
+  the reviewed head.
+- Final AGREE covers implementation revision
+  `b982a80a7770efca5e8b825ab807aa5c07f73540` and is posted on PR #19.
+
+— Implementer (zai-coding-plan/glm-5.3)
