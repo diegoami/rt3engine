@@ -52,8 +52,8 @@ cell in each stored row is the trailing cell whose semantics remain
 open; it is not part of the corner-height grid.
 
 This supersedes the earlier scan-derived offsets: those validated
-windows overlapped the real grids but began **88–96 bytes too early**
-(22–24 f32 cells). The explicit frame, not a smoothness preference or a
+windows overlapped the real grids but began **84–96 bytes too early**
+(21–24 f32 cells). The explicit frame, not a smoothness preference or a
 per-map offset override, determines the corrected starts. California
 Island is the clearest correction: its section is at `0x845b`, its real
 grid starts at `0x847b` with 257×257 cells, and its former candidate
