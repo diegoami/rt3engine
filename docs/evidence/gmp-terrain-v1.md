@@ -1,15 +1,14 @@
 # GMP terrain format (v1 — framing, dims, raw-grid subset)
 
-Claim level: **framing proven; dims-driven grid decode, 5 verified
+Claim level: **framing proven; dims-driven grid decode, 8 verified
 maps**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps: 5 verified grids — the square-lattice maps; 7
-candidate windows — 4 on headerless maps, 3 where both orientations
-validate; 13 with a dims header).
+(40 current maps: 8 verified grids, 1 candidate window, 31 with no
+grid; 13 with a dims header).
 
 ## Proven: save-path section framing
 
@@ -53,7 +52,21 @@ general. The coarse height grid layout — `(lattice+1)²` corner samples
 Germany); for other lattices it is an unverified inference from those
 two maps.
 
-## Proven: dims-driven raw f32 coarse grids (5 verified maps)
+## Proven: record extent word anchors the lattice height
+
+The map record's first extent word (file+12) equals `lattice_h × 256`
+on every header-bearing map checked — 13 of 13, including non-square
+lattices (Alternate USA 640, Orient Express/Southern Pacific 384,
+Greenland Growing 192). `terrain::lattice_h_from_record` reads it, and
+`scan_with_dims` uses it to pick the orientation of non-square
+lattices (the header's `values[5]` is the height; both orientations
+validating no longer forces an ambiguity refusal when the anchor
+speaks). The word also gives the lattice height of every headerless
+map (256…832 across the 40), which suppresses fixed-geometry candidate
+windows on maps whose height is not 256 — reporting a known-wrong
+window would mislead.
+
+## Proven: dims-driven raw f32 coarse grids (8 verified maps)
 
 The coarse heights are stored **uncompressed** as little-endian f32
 metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
@@ -87,21 +100,25 @@ orientation ambiguity is refused rather than guessed.
 
 ## Candidate windows (not established as terrain)
 
-Four further windows validate on maps **without a dims header**
-(Central Pacific, Chicago to New York, Dutchlantis, Tex-Mex), scanned
-with the fixed 256-lattice geometry — the geometry is guessed, not
-read from the map, so these stay candidates. Central Pacific and
-Dutchlantis scan to all-negative ranges (−145…0 m, −150…0 m) —
-seafloor relief or a look-alike; unresolved.
+One further window validates on a **headerless** map whose record
+anchors the height at 256 (Central Pacific, `−145…0 m` — seafloor
+relief or a look-alike; unresolved): the width is guessed at 256, so
+it stays a candidate. Windows previously reported on Chicago to New
+York, Dutchlantis and Tex-Mex are withdrawn — their records anchor
+heights of 512/384/576, so the fixed-geometry windows were known-wrong
+mangled reads.
 
 ## Open
 
-- **35 of 40 maps have no verified terrain decode.** Twenty-eight maps
-  produce no validated window at all — five of them despite a dims
-  header and their own geometry (East Coast, Greenland Growing, Italy,
+- **31 of 40 maps have no verified terrain decode.** Thirty-one maps
+  produce no validated window under their anchored geometry — five of
+  them despite a dims header (East Coast, Greenland Growing, Italy,
   Mississippi Valley, New Beginnings). That is consistent with a
   second storage form, but the checks only establish what was not
-  found; the question is unresolved. For three window-less maps (Britain,
+  found; the question is unresolved. Headerless maps now have a known
+  lattice height from the record word, but no known width — anchoring
+  the width (another record field, or a constrained search over the
+  height-anchored geometries) is the natural next step. For three window-less maps (Britain,
   East Coast, Ireland) a separate whole-file f32-density scan also
   found no dense height-like spans. These checks do not establish how
   those maps store their heights — only what was not found. The
