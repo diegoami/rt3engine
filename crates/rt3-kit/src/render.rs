@@ -70,6 +70,10 @@ fn zlib_store(raw: &[u8]) -> Vec<u8> {
 /// Encodes a heightfield as a north-up, 8-bit RGB PNG. Zero and NaN are
 /// water; other heights use a green-brown-white elevation gradient.
 pub fn encode_png(grid: &HeightGrid) -> Vec<u8> {
+    assert!(
+        grid.rows > 0 && grid.cols > 0,
+        "grid dimensions must be nonzero"
+    );
     let width = u32::try_from(grid.cols).expect("grid width exceeds PNG");
     let height = u32::try_from(grid.rows).expect("grid height exceeds PNG");
     let mut sorted: Vec<f32> = grid
@@ -114,11 +118,22 @@ mod tests {
     use super::*;
     use std::fs;
 
+    fn adler32_reference(bytes: &[u8]) -> u32 {
+        let mut a = 1u64;
+        let mut b = 0u64;
+        for &byte in bytes {
+            a = (a + byte as u64) % 65_521;
+            b = (b + a) % 65_521;
+        }
+        ((b << 16) | a) as u32
+    }
+
     fn decode_stored_png(png: &[u8]) -> (u32, u32, Vec<u8>) {
         assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
         let mut off = 8;
         let mut dims = None;
         let mut idat = Vec::new();
+        let mut ended = false;
         while off < png.len() {
             let len = u32::from_be_bytes(png[off..off + 4].try_into().unwrap()) as usize;
             let tag = &png[off + 4..off + 8];
@@ -126,21 +141,28 @@ mod tests {
             let crc = u32::from_be_bytes(png[off + 8 + len..off + 12 + len].try_into().unwrap());
             assert_eq!(crc32(&png[off + 4..off + 8 + len]), crc);
             if tag == b"IHDR" {
+                assert_eq!(len, 13);
+                assert_eq!(&data[8..13], &[8, 2, 0, 0, 0]);
                 dims = Some((
                     u32::from_be_bytes(data[..4].try_into().unwrap()),
                     u32::from_be_bytes(data[4..8].try_into().unwrap()),
                 ));
             } else if tag == b"IDAT" {
                 idat.extend_from_slice(data);
+            } else if tag == b"IEND" {
+                assert!(data.is_empty());
+                ended = true;
             }
             off += len + 12;
         }
+        assert!(ended && off == png.len());
         let (w, h) = dims.expect("IHDR");
         assert_eq!(&idat[..2], &[0x78, 0x01]);
         let mut pos = 2;
         let mut raw = Vec::new();
         loop {
             let header = idat[pos];
+            assert_eq!(header & 0b110, 0, "stored deflate blocks only");
             pos += 1;
             let len = u16::from_le_bytes(idat[pos..pos + 2].try_into().unwrap()) as usize;
             let nlen = u16::from_le_bytes(idat[pos + 2..pos + 4].try_into().unwrap());
@@ -152,6 +174,9 @@ mod tests {
                 break;
             }
         }
+        assert_eq!(pos + 4, idat.len());
+        let trailer = u32::from_be_bytes(idat[pos..pos + 4].try_into().unwrap());
+        assert_eq!(adler32_reference(&raw), trailer);
         (w, h, raw)
     }
 
@@ -181,6 +206,20 @@ mod tests {
         assert_eq!(&raw[11..14], &WATER_RGB);
         assert_eq!(&raw[14..17], &low);
         assert_eq!(&raw[17..20], &elevation_rgb(200.0, 0.0, 400.0));
+    }
+
+    #[test]
+    #[should_panic(expected = "grid dimensions must be nonzero")]
+    fn rejects_zero_sized_grid() {
+        let grid = HeightGrid {
+            offset: 0,
+            rows: 0,
+            cols: 1,
+            heights: Vec::new(),
+            nan_cells: 0,
+            zero_cells: 0,
+        };
+        let _ = encode_png(&grid);
     }
 
     #[test]

@@ -80,6 +80,12 @@ fn checked_png_path(root: &std::path::Path, out: &std::path::Path) -> Result<Pat
     let root = root
         .canonicalize()
         .map_err(|e| format!("cannot resolve installation root: {e}"))?;
+    if fs::symlink_metadata(out)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+    {
+        return Err("refusing to write a PNG through a symbolic link".to_string());
+    }
     let file = out
         .file_name()
         .ok_or_else(|| "PNG output needs a file name".to_string())?;
@@ -564,6 +570,12 @@ mod tests {
             std::os::unix::fs::symlink(install.join("original.gmp"), output.join("escape.png"))
                 .unwrap();
             assert!(checked_png_path(&install, &output.join("escape.png")).is_err());
+            let target = install.join("created-through-dangling-link.png");
+            std::os::unix::fs::symlink(&target, output.join("dangling.png")).unwrap();
+            if let Ok(path) = checked_png_path(&install, &output.join("dangling.png")) {
+                fs::write(path, b"must not be written").unwrap();
+            }
+            assert!(!target.exists(), "dangling symlink wrote into install");
         }
         fs::remove_dir_all(base).unwrap();
     }

@@ -123,8 +123,9 @@ water handling, and validate the full pixel buffer for all 40 maps.
 rt3ctl map terrain "California Island" --png review-tmp/california.png
 ```
 
-The CLI requires an existing output parent and refuses to write inside
-the canonical installation root (including through an existing symlink).
+The CLI requires an existing output parent, rejects every output
+symlink (including dangling links), and refuses to write inside the
+canonical installation root.
 Generated images stay in the gitignored working area; no original game
 bytes are embedded. These are terrain visualizations, not original-game
 renderings. Inspected outputs show California Island's diagonal island

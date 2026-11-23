@@ -96,6 +96,12 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                         "--json" => json = true,
                         "--png" => {
                             if let Some(value) = it.next() {
+                                if value.starts_with("--") {
+                                    return Err(
+                                        "map terrain: --png needs a value before another option"
+                                            .to_string(),
+                                    );
+                                }
                                 png = Some(PathBuf::from(value));
                             } else {
                                 return Err("map terrain: --png needs a value".to_string());
@@ -191,5 +197,33 @@ fn main() -> ExitCode {
         Command::TypedList(list) => typed_cmd::run(list),
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn png_option_does_not_consume_another_option_as_filename() {
+        let args = [
+            "map".to_string(),
+            "terrain".to_string(),
+            "California Island".to_string(),
+            "--png".to_string(),
+            "--all".to_string(),
+        ];
+        assert!(parse_args(&args).is_err());
+        let explicit = [
+            "map".to_string(),
+            "terrain".to_string(),
+            "California Island".to_string(),
+            "--png".to_string(),
+            "./--all".to_string(),
+        ];
+        let Ok(Command::MapTerrain(t)) = parse_args(&explicit) else {
+            panic!("explicit option-looking filename must be accepted");
+        };
+        assert_eq!(t.png, Some(PathBuf::from("./--all")));
     }
 }
