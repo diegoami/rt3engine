@@ -35,3 +35,23 @@ No game or emulator was booted.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `b8b56d0` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- Ireland recovered through measured pitch and exact-geometry validation:
+  256×320 lattice at `0x839d`, pitch 258, range −32.0…434.8 m.
+- Every established result preserved: the regenerated artifact changed
+  only Ireland and now records 13 verified, 26 pitch-anchored and one
+  candidate (California Island).
+- Competing fallback measurements are refused; the deterministic
+  regression and Ireland install-backed reference were both observed
+  failing against their respective broken behavior.
+- `make fmt`, `make clippy`, `make test` and the install-backed evidence
+  check passed; CI and GitGuardian succeeded on the reviewed head.
+- Final AGREE covers implementation revision
+  `652f000980c1a6a40f6f1a6a49287965843d71ee` and is posted on PR #16.
+
+— Implementer (zai-coding-plan/glm-5.3)
