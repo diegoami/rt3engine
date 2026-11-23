@@ -29,3 +29,27 @@
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `b3eb4a9` (delegated merge per decision 0002,
+2026-11-23). Done-when items and evidence:
+
+- Dependency-free north-up RGB PNG rendering works for all 40 current
+  maps, with water/NaN handling, elevation colors and CRC/Adler
+  checksums. Pixel tests validate orientation and full buffers.
+- `map terrain <name> --png <file>` requires an existing parent, rejects
+  every output symlink (including dangling), refuses installation-root
+  output, rejects option-looking values and rejects `--all` with `--png`.
+- Zero-sized public grids are rejected. Tests independently verify the
+  Adler-32 trailer and PNG fields; path, parser, zero-dimension and
+  checksum regressions were observed failing before their fixes.
+- California, Argentina and British Isles PNGs were independently decoded
+  and visually inspected as recognizable north-up geography. Outputs
+  remain gitignored and no original installation writes occurred.
+- Formatting, clippy, 39 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `9689e1f5208b11f6bd8ed80defbb37ccfebfa561` and is posted on PR #20.
+
+— Implementer (zai-coding-plan/glm-5.3)
