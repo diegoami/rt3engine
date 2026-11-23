@@ -997,6 +997,35 @@ mod tests {
         }
     }
 
+    /// Regression (review round 2, finding 2): the multi-hit path
+    /// `scan_all_geo` must be alignment-aware too. Italy's grid sits at
+    /// 2 mod 4 and `scan_all_geo` ranks that alignment first, so its
+    /// first hit must carry the residue — not a 0-mod-4 misread.
+    #[test]
+    fn scan_all_geo_finds_nonzero_residue_grid() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed scan_all_geo check");
+            return;
+        };
+        let path = std::path::Path::new(&home).join("maps/Italy.gmp");
+        let Ok(bytes) = fs::read(&path) else {
+            eprintln!("{} missing; skipping", path.display());
+            return;
+        };
+        let dims = read_dims(&bytes).expect("dims header present");
+        let geo = Geometry::for_lattice(dims.lattice().0, dims.lattice().1);
+        // Bound the multi-hit scan to the grid's own extent so the
+        // debug-mode test stays fast (scan_all_geo walks to EOF).
+        let end = (34_702 + geo.grid_bytes() + 4096).min(bytes.len());
+        let hits = scan_all_geo(&bytes[..end], 0x3000, &geo);
+        assert!(
+            !hits.is_empty(),
+            "scan_all_geo found no grid in {}",
+            path.display()
+        );
+        assert_eq!(hits[0].offset % 4, 2, "first hit must keep Italy's residue");
+    }
+
     /// Install-backed check for the headerless pitch-anchored path
     /// (record height + measured width). Self-skips without RT3_HOME.
     #[test]

@@ -95,10 +95,11 @@ grid. Water is 0.0 or NaN. Windows validate by value range, ≥5% land,
   record height 256, so the fixed-256 guess applies (`−454…3051 m` at
   257×257); not established as terrain.
 - A measured pitch that fails validation **ends the ladder** — no
-  fallback after the map has spoken (`terrain::scan_headerless`); five
-  maps measured a pitch but validate nowhere (Britain 256×512,
-  British Isles 256×512, Coast to Coast 1024×640, Germantown 448×576,
-  South East Australia 256×384).
+  fallback after the map has spoken (`terrain::scan_headerless`).
+  With alignment coverage, 25 of the 27 headerless maps measure a
+  pitch and validate at exactly that geometry; California Island
+  (record height 256, no measurable pitch) takes the fixed-geometry
+  candidate, and Ireland (no measurable pitch) has no result.
 
 The legacy 9610 map Pacific Coastal is outside the current-map scan;
 a direct check shows it measures (320×832) and validates — evidence
