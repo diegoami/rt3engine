@@ -80,21 +80,45 @@ grid. Water is 0.0 or NaN. Windows validate by value range, ≥5% land,
 
 ## Oracle corroboration (2026-11-23)
 
-The original executable's scenario/sandbox picker reports these lattice
-sizes, independently of the raw-grid scan:
+The original executable's sandbox picker independently confirms every
+current headerless map's lattice: all 26 pitch-anchored maps plus the
+California Island candidate.
 
 | Map | Decoded lattice | Original picker |
 |---|---:|---:|
-| British Isles | 320×512 | 320×512 |
-| Chicago to New York | 640×512 | 640×512 |
-| East Coast, USA | 320×256 | 320×256 |
 | Argentina Opens Up | 640×384 | 640×384 |
+| Britain | 320×512 | 320×512 |
+| British Isles | 320×512 | 320×512 |
+| California Island | 256×256 | 256×256 |
 | Central Pacific | 512×256 | 512×256 |
+| Chicago to New York | 640×512 | 640×512 |
+| Coast to Coast | 1024×640 | 1024×640 |
+| Dutchlantis | 512×384 | 512×384 |
+| East of Mississippi | 640×576 | 640×576 |
+| Eastern Canada | 448×384 | 448×384 |
+| Eastern China | 448×576 | 448×576 |
+| Germantown | 576×576 | 576×576 |
+| Go West! | 384×256 | 384×256 |
 | Ireland | 256×320 | 256×320 |
+| Japan Trembles | 320×256 | 320×256 |
+| Louisiana | 512×512 | 512×512 |
+| Mexico | 640×640 | 640×640 |
+| Pacific NW | 512×512 | 512×512 |
+| Poland | 448×320 | 448×320 |
+| Rhodes Unfinished | 576×576 | 576×576 |
+| Russia | 640×640 | 640×640 |
+| South East Australia | 320×384 | 320×384 |
+| South East USA | 640×768 | 640×768 |
+| Spanish Mainline | 448×384 | 448×384 |
+| Tex-Mex | 512×576 | 512×576 |
+| Texas Tea | 512×576 | 512×576 |
+| War Effort | 320×256 | 320×256 |
 
-All except East Coast are pitch-anchored. These are exact geometry
-confirmations, not independent checks of every height sample; the other
-21 pitch-anchored maps still lack picker confirmation.
+The scenario picker also independently confirms the header-bearing
+East Coast, USA lattice as 320×256. These are exact geometry
+confirmations, not independent checks of every height sample.
+California Island's 256×256 geometry is now established, but its
+candidate height window is still not established as the terrain.
 
 For British Isles, Italy and Ireland, the in-game minimap also
 corroborates row orientation. The comparison resized each decoded grid
@@ -114,12 +138,13 @@ camera rectangle limit them. They are corroboration on these three
 maps, not a general acceptance threshold or a row-order claim for maps
 not compared.
 
-Ireland was loaded under the sandbox's default Argentina filename in
-the writable oracle copy because the picker scroll widget did not
-respond to scripted input. The substituted file's SHA-256 matched
-Ireland's before launch; the picker reported 256×320 and the loaded
-game showed Ireland and Dublin. An exit trap restored Argentina, and a
-byte-for-byte comparison verified the restoration. No original
+The picker scroll widget did not respond to scripted input, so the
+complete headerless sweep presented each map in turn under the
+sandbox's default Argentina filename in the writable oracle copy. Each
+substituted file's SHA-256 matched its source before capture. In a
+separate run, Ireland loaded this way showed Ireland and Dublin in
+game. Exit traps restored Argentina after the sessions, and
+byte-for-byte comparisons verified the restoration. No original
 installation file was modified. Every oracle session held the capture
 lock; screenshots and original bytes are not committed.
 
@@ -159,8 +184,10 @@ that).
 
 ## Open
 
-- Picker geometry confirmation for the other 21 pitch-anchored maps;
-  minimap row-order comparison currently covers only British Isles,
+- California Island's candidate window: the original picker confirms
+  the 256×256 geometry, but the thumbnail comparison does not establish
+  this window as the terrain.
+- Minimap row-order comparison currently covers only British Isles,
   Italy and Ireland.
 - Which validated window is canonical when several fit (zero padding
   blends into leading water rows); the trailing cell per row.
