@@ -49,8 +49,9 @@ Southern Pacific    256,96,256,96, 1024,384,  4096,1536
 Across the 13 header-bearing maps the lattice is consistently
 tiles×4 and the fine grid lattice×4, and the maps are not square in
 general. The coarse height grid layout — `(lattice+1)²` corner samples
-— is verified only on the 256-lattice Crossing the Alps; for the other
-lattices it is an unverified inference from that one map.
+— is verified on the 256- and 512-lattices (Crossing the Alps,
+Germany); for other lattices it is an unverified inference from those
+two maps.
 
 ## Proven: dims-driven raw f32 coarse grids (5 verified maps)
 
@@ -72,10 +73,13 @@ independent evidence: Crossing the Alps (256-lattice; ASCII relief
 matches the in-game view captured from the oracle — median ≈ 564 m,
 p95 ≈ 1,448 m, max ≈ 2,344 m) and Germany (512-lattice; renders the
 expected relief — central uplands, coastline, southern high ground —
-and its 4 KiB-windowed height-dense span `[0x8000..0x10a000)`
-(1,056,768 bytes) brackets the scanned grid: 513 × 2,056 =
-1,054,728 bytes at `0x89bc..0x10a1c4`, overlapping the span to within
-its 4 KiB windowing). On that rule, the square-lattice maps scan to **verified** grids:
+and aligns with its 4 KiB-windowed height-dense span: the span
+`[0x8000..0x10a000)` covers the scanned grid `0x89bc..0x10a1c4`
+(513 × 2,056 = 1,054,728 bytes) except for the grid's final 452
+bytes, which fall in the first 4 KiB window past the span — a window
+whose density fell below the scan's threshold, most plausibly the
+grid's low-relief trailing rows). On that rule, the square-lattice
+maps scan to **verified** grids:
 Crossing the Alps, Germany, State of Germany, France, Third Republic.
 The three non-square maps whose both orientations validate (Alternate
 USA, Orient Express, Southern Pacific) are recorded as candidates —
@@ -92,7 +96,7 @@ seafloor relief or a look-alike; unresolved.
 
 ## Open
 
-- **32 of 40 maps have no verified terrain decode.** Twenty-eight maps
+- **35 of 40 maps have no verified terrain decode.** Twenty-eight maps
   produce no validated window at all — five of them despite a dims
   header and their own geometry (East Coast, Greenland Growing, Italy,
   Mississippi Valley, New Beginnings). That is consistent with a
