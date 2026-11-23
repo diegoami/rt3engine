@@ -137,24 +137,22 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
         );
         return ExitCode::from(1);
     }
-    let Some(g) = terrain::scan(&bytes, 0x3000) else {
+    let Some((g, kind)) = scan_map(&bytes) else {
         eprintln!("rt3ctl: {}: no validated coarse grid found", path.display());
         return ExitCode::from(1);
     };
-    let dims = terrain::read_dims(&bytes);
-    let status = grid_status(&dims, true).unwrap_or("candidate");
     let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
     println!(
         "{}: grid at {:#x} ({}x{}, {} m..{} m, NaN {} / zero {}) [{}]",
         path.display(),
         g.offset,
-        terrain::COLS,
-        terrain::ROWS,
+        g.cols,
+        g.rows,
         lo,
         hi,
         g.nan_cells,
         g.zero_cells,
-        status
+        kind.as_str()
     );
     print_relief(&g);
     ExitCode::SUCCESS
@@ -183,21 +181,36 @@ fn terrain_paths(root: &std::path::Path) -> Vec<(String, PathBuf)> {
     out
 }
 
-/// A grid hit counts as *verified* only when the map's own dims header
-/// says the lattice is 256×256: the scanner's fixed geometry (257×257
-/// corner window, 1,032-byte rows) is only known to read a rectilinear
-/// subwindow of the parent grid for that lattice (proven on Crossing
-/// the Alps, whose header reads 256,256). On wider lattices the same
-/// window geometry cannot be a rectilinear subwindow of a row-major
-/// parent, so those hits are recorded as candidates.
-fn grid_status(dims: &Option<terrain::TerrainDims>, has_grid: bool) -> Option<&'static str> {
-    if !has_grid {
-        return None;
+/// A hit counts as *verified* when it was scanned with the geometry
+/// read from the map's own dims header (rows = lattice+2 cells — the
+/// rule proven on Crossing the Alps and Germany); a hit from the fixed
+/// 256-lattice geometry on a headerless map is a *candidate* (the
+/// geometry is guessed, not read from the map).
+#[derive(Clone, Copy, PartialEq)]
+enum HitKind {
+    Verified,
+    Candidate,
+}
+
+impl HitKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            HitKind::Verified => "verified",
+            HitKind::Candidate => "candidate",
+        }
     }
-    match dims {
-        Some(d) if d.values[4] == 256 && d.values[5] == 256 => Some("verified"),
-        _ => Some("candidate"),
+}
+
+/// Scans one map: dims-driven geometry when the header is present,
+/// else the fixed 256-lattice geometry. Returns the grid and whether
+/// the geometry came from the map itself.
+fn scan_map(bytes: &[u8]) -> Option<(terrain::HeightGrid, HitKind)> {
+    if let Some(dims) = terrain::read_dims(bytes) {
+        if let Some(g) = terrain::scan_with_dims(bytes, 0x3000, &dims) {
+            return Some((g, HitKind::Verified));
+        }
     }
+    terrain::scan(bytes, 0x3000).map(|g| (g, HitKind::Candidate))
 }
 
 fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
@@ -214,10 +227,11 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
     struct Row {
         name: String,
         dims: Option<terrain::TerrainDims>,
-        grid: Option<(usize, usize, usize, f32, f32)>,
+        grid: Option<(usize, usize, usize, f32, f32, usize, usize)>,
         status: Option<&'static str>,
         missed: Option<&'static str>,
     }
+
     let mut rows = Vec::new();
     for (name, path) in &paths {
         let Ok(bytes) = fs::read(path) else {
@@ -234,11 +248,12 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             continue; // legacy layout: separate claim
         }
         let dims = terrain::read_dims(&bytes);
-        let grid = terrain::scan(&bytes, 0x3000).map(|g| {
+        let scanned = scan_map(&bytes);
+        let grid = scanned.as_ref().map(|(g, _)| {
             let (lo, hi) = g.height_range().unwrap_or((0.0, 0.0));
-            (g.offset, g.nan_cells, g.zero_cells, lo, hi)
+            (g.offset, g.nan_cells, g.zero_cells, lo, hi, g.rows, g.cols)
         });
-        let status = grid_status(&dims, grid.is_some());
+        let status = scanned.as_ref().map(|(_, kind)| kind.as_str());
         let missed = grid.is_none().then_some("no validated grid");
         rows.push(Row {
             name: name.clone(),
@@ -267,8 +282,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             let grid = match &r.grid {
-                Some((off, nan, zero, lo, hi)) => format!(
-                    "{{\"grid_offset\": {off}, \"nan_cells\": {nan}, \"zero_cells\": {zero}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}}"
+                Some((off, nan, zero, lo, hi, rows, cols)) => format!(
+                    "{{\"grid_offset\": {off}, \"rows\": {rows}, \"cols\": {cols}, \"nan_cells\": {nan}, \"zero_cells\": {zero}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}}"
                 ),
                 None => "null".to_string(),
             };
@@ -330,9 +345,9 @@ fn print_relief(g: &terrain::HeightGrid) {
     let p5 = sorted[sorted.len() / 20];
     let p95 = sorted[sorted.len() * 19 / 20];
     let chars: Vec<char> = " .:-=+*#%@".chars().collect();
-    for r in 0..terrain::ROWS / 8 {
+    for r in 0..g.rows / 8 {
         let mut line = String::new();
-        for c in 0..terrain::COLS / 6 {
+        for c in 0..g.cols / 6 {
             let mut s = 0.0f32;
             let mut n = 0usize;
             for dr in 0..8 {
