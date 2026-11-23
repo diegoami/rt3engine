@@ -29,7 +29,7 @@ Usage:
   rt3ctl pk4 list [--path <install-root>] [--archive <file>]... [--json]
   rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl map list [--path <install-root>] [--json]
-  rt3ctl map terrain <name> [--path <install-root>]
+  rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
   rt3ctl --help
 
 Environment:
@@ -82,6 +82,7 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                 let mut name: Option<String> = None;
                 let mut all = false;
                 let mut json = false;
+                let mut png = None;
                 while let Some(arg) = it.next() {
                     match arg.as_str() {
                         "--path" => {
@@ -93,6 +94,19 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                         }
                         "--all" => all = true,
                         "--json" => json = true,
+                        "--png" => {
+                            if let Some(value) = it.next() {
+                                if value.starts_with("--") {
+                                    return Err(
+                                        "map terrain: --png needs a value before another option"
+                                            .to_string(),
+                                    );
+                                }
+                                png = Some(PathBuf::from(value));
+                            } else {
+                                return Err("map terrain: --png needs a value".to_string());
+                            }
+                        }
                         other if other.starts_with("--") => {
                             return Err(format!("map terrain: unknown option {other}"));
                         }
@@ -109,12 +123,16 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                 if name.is_some() && all {
                     return Err("map terrain: --all takes no map name".to_string());
                 }
+                if all && png.is_some() {
+                    return Err("map terrain: --png needs one map name, not --all".to_string());
+                }
                 if all || name.is_some() {
                     Ok(Command::MapTerrain(map_cmd::MapTerrain {
                         path,
                         name,
                         all,
                         json,
+                        png,
                     }))
                 } else {
                     Err("map terrain needs a map name or --all".to_string())
@@ -179,5 +197,33 @@ fn main() -> ExitCode {
         Command::TypedList(list) => typed_cmd::run(list),
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn png_option_does_not_consume_another_option_as_filename() {
+        let args = [
+            "map".to_string(),
+            "terrain".to_string(),
+            "California Island".to_string(),
+            "--png".to_string(),
+            "--all".to_string(),
+        ];
+        assert!(parse_args(&args).is_err());
+        let explicit = [
+            "map".to_string(),
+            "terrain".to_string(),
+            "California Island".to_string(),
+            "--png".to_string(),
+            "./--all".to_string(),
+        ];
+        let Ok(Command::MapTerrain(t)) = parse_args(&explicit) else {
+            panic!("explicit option-looking filename must be accepted");
+        };
+        assert_eq!(t.png, Some(PathBuf::from("./--all")));
     }
 }

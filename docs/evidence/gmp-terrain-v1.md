@@ -107,6 +107,31 @@ smoothness and ≥10 m relief; geometries below the sampler's 33-cell
 floor or above the bounded parser limit are rejected rather than
 mis-sampled.
 
+## 2D PNG render
+
+`rt3_kit::render::encode_png` renders every framed grid as a north-up,
+8-bit RGB PNG with no external dependencies. Display rows reverse the
+stored order (the south-to-north orientation corroborated on three
+maps); zero and NaN use the oracle's water color `(41, 64, 96)`, and
+other heights use a green-brown-white gradient
+scaled between the grid's 5th and 95th height percentiles. The PNG uses
+standard uncompressed-deflate blocks, with CRC-32 and Adler-32
+checksums. Tests decode its stored pixels, check exact orientation and
+water handling, and validate the full pixel buffer for all 40 maps.
+
+```sh
+rt3ctl map terrain "California Island" --png review-tmp/california.png
+```
+
+The CLI requires an existing output parent, rejects every output
+symlink (including dangling links), and refuses to write inside the
+canonical installation root.
+Generated images stay in the gitignored working area; no original game
+bytes are embedded. These are terrain visualizations, not original-game
+renderings. Inspected outputs show California Island's diagonal island
+chain, Argentina's Andes on the western edge with plains east, and the
+recognizable north-up British Isles coastline.
+
 ## Oracle corroboration (2026-11-23)
 
 The original executable's sandbox picker independently confirms every
