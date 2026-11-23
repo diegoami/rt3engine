@@ -1,209 +1,132 @@
-# GMP terrain format (v1 — framing, dims, raw-grid subset)
+# GMP terrain format (v1 — coarse heightfield)
 
-Claim level: **framing proven; grid decode for 39 of 40 current maps
-(13 verified, 25 pitch-anchored; 1 candidate; 1 legacy map skipped)**. Established 2026-11-22/23, milestone 3b, issues
+Claim level: **framing proven; coarse-grid decode for 39 of 40 current
+maps**. Established 2026-11-22/23, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 maps: 13 verified, 25 pitch-anchored, 1 candidate, 1 legacy-skipped
-with no result; 13 with a dims header).
+(40 current maps: 13 verified, 25 pitch-anchored, 1 candidate —
+California Island; 1 no-result — Ireland. Pacific Coastal is legacy
+9610 and outside this scan.)
 
 ## Proven: save-path section framing
 
-- `RT3.exe 0x00444dd0` is the map **save** orchestrator. Disassembly at
+- `RT3.exe 0x00444dd0` is the map **save** orchestrator (corrects
+  gmp-format-v1.md's earlier loader claim). Disassembly at
   `0x00444f83`…`0x00444fdb`: `MOV EDX,0x32c8; CALL 0x00531340` writes a
   4-byte section tag, then `PUSH 0x0; PUSH 0x4f2c; LEA EDX,[EBX+4];
-  CALL 0x00531030` writes the 20,268-byte map record — the same sizes
-  the prelude parser reads. `0x00531340(this, tag)` = tag write;
-  `0x00531030(this, src, size)` = payload write. The prelude's "skipped"
-  u32 words are section tags.
+  CALL 0x00531030` writes the 20,268-byte map record. `0x00531340(this,
+  tag)` = tag write; `0x00531030(this, src, size)` = payload write.
 - The terrain section family (written by `0x00449520`, entered after
   tag `0x32dd`): `0x2ee2` + nine dims, `0x2ee3`/`0x2ef4` + presence
   bitmask, `0x2ef5`/`0x2ef6` + arrays, `0x2ee4` + bitmask, `0x2ee5` +
   f32 block, `0x2f43`/`0x2f44` + per-tile records (`0x0042b4a0`).
-  `0x00517d90` is the level-masked quadtree writer used before it.
-- On `Crossing the Alps.gmp` the chain sits at `0x1224b8`; its bitmask
-  is `0x20000` bytes = `(256·256 + 1024·1024 − 256·256)/8` bits — a
-  two-level presence mask over the 1024×1024 fine grid.
+  `0x00517d90` is the level-masked quadtree writer.
+- The tag family marks format generation (shipped maps carry 12000-
+  family tags; fresh in-game saves use 13000-family, e.g. record tag
+  `0x32c8`).
 
 ## Proven: per-map terrain dims vary
 
-The nine dims are **not constant across maps**. `terrain::read_dims`
-recovers them from the `0x2ee2` header (13 of 40 maps carry one; the
-header's own framing differs in the rest — open). Observed groups
-(values[0..3]=tiles, [4..5]=lattice, [6..7]=fine):
+The nine dims are **not constant across maps**; `terrain::read_dims`
+recovers them from the `0x2ee2` header (13 of 40 maps carry one).
+Observed groupings (tiles, tiles, tiles, tiles, lattice_w,
+lattice_h, fine_w = 4·lattice_w, fine_h = 4·lattice_h, 0):
 
 ```text
-Crossing the Alps   64,64,64,64,   256,256,   1024,1024
-Germany             128,128,128,128, 512,512, 2048,2048
-France              112,112,112,112, 448,448, 1792,1792
-East Coast, USA     80,64,80,64,   320,256,   1280,1024
-Alternate USA       256,160,256,160, 1024,640, 4096,2560
-Southern Pacific    256,96,256,96, 1024,384,  4096,1536
+Crossing the Alps   256×256 lattice, 1024×1024 fine
+Germany             512×512, 2048×2048
+East Coast, USA     320×256, 1280×1024
+Alternate USA       1024×640, 4096×2560
+Greenland Growing   256×192, 1024×768
 …full list in terrain-scan-v1.json
 ```
 
-Across the 13 header-bearing maps the lattice is consistently
-tiles×4 and the fine grid lattice×4, and the maps are not square in
-general. The coarse height grid layout — `(lattice+1)²` corner samples
-— is verified on the 256- and 512-lattices (Crossing the Alps,
-Germany); for other lattices it is an unverified inference from those
-two maps.
+The coarse height grid carries `(lattice+1)²` corner samples —
+verified on the 256- and 512-lattices (Crossing the Alps, Germany);
+for other lattices it is an unverified inference from those two maps.
 
-## Proven: byte alignment is data-dependent, and the scan covers it
+## Proven: byte alignment is data-dependent
 
 Odd-length sections (train-roster strings; the legacy 3,001-byte aux
-records) shift a map's post-prelude stream by 1-3 bytes, so the raw
-rows do not always sit 0-mod-4: Italy's heights sit at **2 mod 4**
-(`0x8801`-adjacent), exactly as the odd string lengths imply. The scan
-therefore tries all four byte alignments, ranked by land-like float
-density over the first 4 MiB (`alignment_rank`); hits record their
-geometry, so the chosen alignment stays visible in the artifact. The
-record-word height and the measured pitch apply unchanged at any
-alignment.
+records) shift a map's post-prelude stream by 1–3 bytes, so raw rows
+do not always sit 0-mod-4: Italy's heights sit at **2 mod 4**, exactly
+where its roster implies. The scan tries all four byte alignments
+ranked by land-like float density (`alignment_rank`), and hits record
+their geometry so the chosen alignment stays visible. Residues across
+the 39 decoded grids: 10 at 0, 17 at 1, 6 at 2, 6 at 3 (mod 4).
 
 ## Proven: record extent word anchors the lattice height
 
 The map record's first extent word (file+12) equals `lattice_h × 256`
-on every header-bearing map checked — 13 of 13, including non-square
-lattices (Alternate USA 640, Orient Express/Southern Pacific 384,
-Greenland Growing 192). `terrain::lattice_h_from_record` reads it, and
-`scan_with_dims` uses it to pick the orientation of non-square
-lattices (the header's `values[5]` is the height; both orientations
-validating no longer forces an ambiguity refusal when the anchor
-speaks). The word also gives the lattice height of every headerless
-map (256…768 across the 40 current maps), which suppresses fixed-geometry candidate
-windows on maps whose height is not 256 — reporting a known-wrong
-window would mislead.
+on every header-bearing map checked — 13 of 13, including every
+non-square lattice (Alternate USA 640, Orient Express/Southern Pacific
+384, Greenland Growing 192). `terrain::lattice_h_from_record` reads it
+and `scan_with_dims` uses it to anchor the orientation of non-square
+lattices; it also gives the lattice height of every headerless map
+(256…768 across the current maps).
 
-## Proven: dims-driven raw f32 coarse grids (13 verified maps)
+## Proven: raw f32 coarse grids
 
 The coarse heights are stored **uncompressed** as little-endian f32
-metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus one
-trailing cell (semantics open) — forming the `(lattice+1)²` corner
-grid, with the lattice read from each map's own `0x2ee2` dims header
-(`terrain::scan_with_dims`). The orientation of non-square lattices is
-anchored by the record extent word (see the law above); only when no
-anchor is available are both orientations evaluated, and when both
-validate without an anchor the result is refused rather than guessed.
-The artifact records the rows/cols each hit was read with. Water is
-0.0 or NaN. The scanner validates windows by
-value range, ≥5% land, ≤80% NaN, smoothness and ≥10 m relief;
-geometries too small for the sampler's probe lattice (< 33 cells per
-side) are rejected rather than mis-sampled.
+metres in `(lattice+2)`-cell rows — `(lattice+1)` height cells plus
+one trailing cell (semantics open) — forming the `(lattice+1)²` corner
+grid. Water is 0.0 or NaN. Windows validate by value range, ≥5% land,
+≤80% NaN, smoothness and ≥10 m relief; geometries below the sampler's
+33-cell floor are rejected rather than mis-sampled.
 
-The row rule (`lattice+2` cells) is corroborated on two maps by
-independent evidence: Crossing the Alps (256-lattice; ASCII relief
-matches the in-game view captured from the oracle — median ≈ 564 m,
-p95 ≈ 1,448 m, max ≈ 2,344 m) and Germany (512-lattice; renders the
-expected relief — central uplands, coastline, southern high ground —
-and aligns with its 4 KiB-windowed height-dense span: the span
-`[0x8000..0x10a000)` covers the scanned grid `0x89bc..0x10a1c4`
-(513 × 2,056 = 1,054,728 bytes) except for the grid's final 452
-bytes, which fall in the first 4 KiB window past the span — a window
-whose density fell below the scan's threshold, most plausibly the
-grid's low-relief trailing rows). On that rule, eight maps scan to
-**verified** grids: Crossing the Alps, Germany, State of Germany,
-France, Third Republic (square lattices) and Alternate USA, Orient
-Express, Southern Pacific (non-square, orientations anchored by the
-record extent word).
+## Scan ladder and classification
 
-## Measured row pitch anchors the headerless width
+- **verified** (13): header-bearing maps, geometry from their own
+  record-anchored dims header (`scan_with_dims`; both orientations
+  considered for non-square lattices, the record word picks the
+  height). Includes Italy at alignment 2.
+- **pitch-anchored** (25): headerless maps whose height comes from the
+  record word and whose width comes from a clearly separated measured
+  row pitch (`measure_pitch`: densest height span, lag
+  autocorrelation over the observed `(w+2)` candidates, winner ≤ 60%
+  of the runner-up), validated at exactly that geometry. Renders
+  corroborate: Germany's Mittelgebirge, Tex-Mex's Sierra Madre,
+  Chicago–New York's Appalachian diagonal, Argentina's Andes edge
+  (max 4,966 m), Rhodes' island relief.
+- **candidate** (1): California Island — no measurable pitch and
+  record height 256, so the fixed-256 guess applies (`−454…3051 m` at
+  257×257); not established as terrain.
+- A measured pitch that fails validation **ends the ladder** — no
+  fallback after the map has spoken (`terrain::scan_headerless`); five
+  maps measured a pitch but validate nowhere (Britain 256×512,
+  British Isles 256×512, Coast to Coast 1024×640, Germantown 448×576,
+  South East Australia 256×384).
 
-For headerless maps, `terrain::measure_pitch` locates the largest
-height-dense span (4 KiB windows ≥ 12% land-magnitude values within
-the first 3 MiB), measures the dominant row pitch by lag
-autocorrelation over the observed `(w+2)`-cell candidates, and accepts
-it only when the winner is clearly separated (score ≤ 60% of the
-runner-up). The measured width joins the record-anchored height, and
-that single geometry then faces the same strict window validation;
-a measured pitch that fails validation **ends the ladder** — the
-fixed-geometry candidate never runs after the map has spoken
-(`terrain::scan_headerless`).
-
-With alignment coverage the funnel now yields a validated grid for
-**25 of the 27 current headerless maps** — all the entries listed in
-the artifact (`"status": "pitch-anchored"`, geometry recorded). The
-two exceptions: California Island (record height 256, no measurable
-pitch → the fixed-geometry **candidate**, `−454…3051 m` at 257×257)
-and the legacy 9610 map Pacific Coastal, which is outside the
-current-map scan but measures (320×832) and validates in a direct
-check — evidence that the raw-row layout reaches the legacy format
-too (not claimed beyond that).
-
-## Candidate windows (not established as terrain)
-
-One further window validates on a **headerless** map whose record
-anchors the height at 256 (Central Pacific, `−145…0 m` — seafloor
-relief or a look-alike; unresolved): the width is guessed at 256, so
-it stays a candidate. Windows previously reported on Chicago to New
-York, Dutchlantis and Tex-Mex are withdrawn — their records anchor
-heights of 512/384/576, so the fixed-geometry windows were known-wrong
-mangled reads.
+The legacy 9610 map Pacific Coastal is outside the current-map scan;
+a direct check shows it measures (320×832) and validates — evidence
+the raw-row layout reaches the legacy format too (not claimed beyond
+that).
 
 ## Open
 
-- **30 of 40 maps have no grid decode** (verified or pitch-anchored).
-  Twenty-nine of them produce no validated window at all; the thirtieth
-  is the unestablished Central Pacific candidate window, which is not a
-  decode. Not all 29 were window-tested — the ladder scans no geometry
-  when the pitch is unmeasurable and the record height is not 256 —
-  but five did carry a dims header and their own anchored geometry and
-  still produced no window (East Coast, Greenland Growing, Italy,
-  Mississippi Valley, New Beginnings). That is
-  consistent with a
-  second storage form, but the checks only establish what was not
-  found; the question is unresolved. For three window-less maps (Britain,
-  East Coast, Ireland) a separate whole-file f32-density scan also
-  found no dense height-like spans. These checks do not establish how
-  those maps store their heights — only what was not found. The
-  per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0` — 33-ish
-  short arrays per tile) and the quadtree levels (`0x00517d90`) are
-  candidate carriers; the read-side decoder is unidentified (the
-  loader function is still unknown — only the save path is mapped).
-- The trailing cell per row; which validated window is canonical when
-  several fit (zero padding blends into leading water rows).
-- The 27 maps without a `0x2ee2` dims header — their terrain framing
-  differs (one of them, Central Pacific, still produces a candidate
-  window; three earlier candidates were withdrawn as known-wrong
-  geometry).
-- LOD decomposition beyond the coarse grid; legacy 9609/9610 layouts
-  (their sections sit 2-mod-4 after the odd aux records).
+- **Ireland is the only current map without a grid result** (no
+  header, record height 320, no measurable pitch). Its storage is
+  unknown — nothing was found, which does not establish how it stores
+  heights.
+- Which validated window is canonical when several fit (zero padding
+  blends into leading water rows); the trailing cell per row.
+- Per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0`) and
+  quadtree levels (`0x00517d90`) beyond the coarse grids; the
+  read-side decoder is still unidentified (only the save path is
+  mapped).
+- Legacy 9609/9610 layouts (only Pacific Coastal touched: it measures
+  and validates).
 - The `0x407FC0 | k<<24` field at file+0x3008 (from
   [gmp-format-v1.md](gmp-format-v1.md)) — relation to terrain unproven.
-
-## Oracle corroboration (Wine, capture-lock protocol)
-
-With the game parked at the loaded-map state, menu-state and map-state
-dumps of the same process differ in 11 new regions; one
-(`05db2000_07130000`, new at load) carries f32 spans with height-like
-statistics (median 0, p95 ≈ 900 m, 43% zeros) and long runs of the
-`.gmp`'s own bytes verbatim (a file cache, `mem@+X == file@(X−0xF583A)`
-on Tutorial_1) — heights can reach the renderer without decompression.
-
-## Corrected claims (supersede parts of gmp-format-v1.md)
-
-- `0x00444dd0` writes maps; it does not read them. The layout facts in
-  gmp-format-v1.md stand — a writer emits exactly the record sequence
-  its loader consumes — but the loader function is unidentified. The
-  earlier "chunk stream" and "terrain size at record+0x3008" corrections
-  remain in force.
-- `0x2ee0` (12000) at file+4 of shipped maps is a section tag of the
-  12000 family (fresh in-game saves use the 13000 family, e.g. record
-  tag `0x32c8`); the family appears to mark format generation, matching
-  the 9609/9701 version split.
-- Earlier session-local scan tables (NaN-tolerant, denormals counted as
-  land) were majority false positives; only the windows listed in
-  terrain-scan-v1.json passed the tightened gates (denormals excluded,
-  full-cell range check on extraction).
 
 ## Reproduce
 
 ```sh
 export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
-cargo test -p rt3-kit terrain            # fixtures + reference map
+cargo test -p rt3-kit terrain            # fixtures + Alps/Germany/Italy/Argentina
 cargo run -q -p rt3ctl -- map terrain "Crossing the Alps"
 cargo run -q --release -p rt3ctl -- map terrain --all   # the artifact's producer
 make evidence-check                      # includes terrain-scan-v1.json

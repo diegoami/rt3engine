@@ -552,20 +552,23 @@ pub fn scan_all_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Vec<HeightGrid
         return Vec::new();
     }
     let mut out = Vec::new();
-    let mut off = from & !3;
-    while off + geo.grid_bytes() <= bytes.len() {
-        if !probe_rejects(bytes, off, geo)
-            && prefilter(bytes, off, geo)
-            && validate(bytes, off, geo)
-        {
-            if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
-                let next = g.offset + geo.grid_bytes();
-                out.push(g);
-                off = next;
-                continue;
+    for &a in &alignment_rank(bytes) {
+        let start = from + ((a + 4 - (from & 3)) & 3);
+        let mut off = start;
+        while off + geo.grid_bytes() <= bytes.len() {
+            if !probe_rejects(bytes, off, geo)
+                && prefilter(bytes, off, geo)
+                && validate(bytes, off, geo)
+            {
+                if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
+                    let next = g.offset + geo.grid_bytes();
+                    out.push(g);
+                    off = next;
+                    continue;
+                }
             }
+            off += 4;
         }
-        off += 4;
     }
     out
 }
@@ -944,17 +947,22 @@ mod tests {
             eprintln!("RT3_HOME unset; skipping install-backed terrain check");
             return;
         };
-        for (file, lattice, max_min, max_max) in [
+        // (file, lattice, residue mod 4, min relief, max relief)
+        for (file, lattice, residue, max_min, max_max) in [
             (
                 "maps/Crossing the Alps.gmp",
                 (256usize, 256usize),
+                0usize,
                 2000.0f32,
                 2600.0f32,
             ),
-            ("maps/Germany.gmp", (512, 512), 2000.0, 2400.0),
+            ("maps/Germany.gmp", (512, 512), 0, 2000.0, 2400.0),
             // Non-square lattice: orientation resolved by the record
             // extent word (h = 640).
-            ("maps/Alternate USA.gmp", (1024, 640), 1500.0, 2100.0),
+            ("maps/Alternate USA.gmp", (1024, 640), 0, 1500.0, 2100.0),
+            // Odd-length sections shift this map's stream 2 mod 4; the
+            // ranked-alignment scan must find it there.
+            ("maps/Italy.gmp", (384, 448), 2, 1500.0, 2100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {
@@ -972,6 +980,12 @@ mod tests {
                 "{}: offset {:#x}",
                 path.display(),
                 g.offset
+            );
+            assert_eq!(
+                g.offset % 4,
+                residue,
+                "{}: alignment residue",
+                path.display()
             );
             assert!(
                 lo >= -1000.0 && hi >= max_min && hi <= max_max,
@@ -999,6 +1013,8 @@ mod tests {
                 2800.0f32,
             ),
             ("maps/Chicago to New York.gmp", (640, 512), 1500.0, 2100.0),
+            // Pitch-measured width on a non-square headerless map.
+            ("maps/Argentina Opens Up.gmp", (640, 384), 4000.0, 5100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {
