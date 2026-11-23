@@ -143,11 +143,13 @@ mangled reads.
 ## Open
 
 - **30 of 40 maps have no grid decode** (verified or pitch-anchored).
-  Twenty-nine of them produce no validated window at all under their
-  anchored geometry — the thirtieth is the unestablished Central
-  Pacific candidate window, which is not a decode. Five of the 29
-  produce no window despite a dims header (East Coast, Greenland
-  Growing, Italy, Mississippi Valley, New Beginnings). That is
+  Twenty-nine of them produce no validated window at all; the thirtieth
+  is the unestablished Central Pacific candidate window, which is not a
+  decode. Not all 29 were window-tested — the ladder scans no geometry
+  when the pitch is unmeasurable and the record height is not 256 —
+  but five did carry a dims header and their own anchored geometry and
+  still produced no window (East Coast, Greenland Growing, Italy,
+  Mississippi Valley, New Beginnings). That is
   consistent with a
   second storage form, but the checks only establish what was not
   found; the question is unresolved. For three window-less maps (Britain,
