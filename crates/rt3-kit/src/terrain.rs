@@ -425,7 +425,9 @@ fn densest_span(bytes: &[u8]) -> Option<(usize, usize)> {
     let end = bytes.len().min(PITCH_SEARCH_LIMIT);
     let mut best: Option<(usize, usize)> = None;
     let mut cur: Option<(usize, usize)> = None;
-    let mut off = 0x3000;
+    // start at the densest-ranked alignment
+    let a = alignment_rank(bytes)[0];
+    let mut off = 0x3000 + ((a + 4) & 3);
     while off + 4096 <= end {
         let mut land = 0usize;
         for i in 0..256 {
@@ -550,42 +552,73 @@ pub fn scan_all_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Vec<HeightGrid
         return Vec::new();
     }
     let mut out = Vec::new();
-    let mut off = from & !3;
-    while off + geo.grid_bytes() <= bytes.len() {
-        if !probe_rejects(bytes, off, geo)
-            && prefilter(bytes, off, geo)
-            && validate(bytes, off, geo)
-        {
-            if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
-                let next = g.offset + geo.grid_bytes();
-                out.push(g);
-                off = next;
-                continue;
+    for &a in &alignment_rank(bytes) {
+        let start = from + ((a + 4 - (from & 3)) & 3);
+        let mut off = start;
+        while off + geo.grid_bytes() <= bytes.len() {
+            if !probe_rejects(bytes, off, geo)
+                && prefilter(bytes, off, geo)
+                && validate(bytes, off, geo)
+            {
+                if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
+                    let next = g.offset + geo.grid_bytes();
+                    out.push(g);
+                    off = next;
+                    continue;
+                }
             }
+            off += 4;
         }
-        off += 4;
     }
     out
 }
 
-/// Scans for the first validated grid of the given geometry.
+/// Scans for the first validated grid of the given geometry, trying
+/// byte alignments ranked by land-like density first (odd-length
+/// string sections shift a map's whole post-prelude stream by 1-3
+/// bytes — Italy's heights sit at 2 mod 4, for example).
 pub fn scan_geo(bytes: &[u8], from: usize, geo: &Geometry) -> Option<HeightGrid> {
     if !geo.supported() {
         return None;
     }
-    let mut off = from & !3;
-    while off + geo.grid_bytes() <= bytes.len() {
-        if !probe_rejects(bytes, off, geo)
-            && prefilter(bytes, off, geo)
-            && validate(bytes, off, geo)
-        {
-            if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
-                return Some(g);
+    for &a in &alignment_rank(bytes) {
+        let start = from + ((a + 4 - (from & 3)) & 3);
+        let mut off = start;
+        while off + geo.grid_bytes() <= bytes.len() {
+            if !probe_rejects(bytes, off, geo)
+                && prefilter(bytes, off, geo)
+                && validate(bytes, off, geo)
+            {
+                if let Some(g) = extract(bytes, refine_start(bytes, off, geo), geo) {
+                    return Some(g);
+                }
             }
+            off += 4;
         }
-        off += 4;
     }
     None
+}
+
+/// Ranks the four byte alignments by land-like float density over the
+/// first 4 MiB (descending, ties keep natural order). Cheap: one pass
+/// per alignment sampling every 16th float.
+fn alignment_rank(bytes: &[u8]) -> [usize; 4] {
+    let end = bytes.len().min(PITCH_SEARCH_LIMIT + 0x10_0000);
+    let mut counts = [0usize; 4];
+    for (a, count) in counts.iter_mut().enumerate() {
+        let mut off = 0x3000 + ((a + 4) & 3);
+        while off + 16 <= end {
+            if let Some(v) = cell(bytes, off) {
+                if is_land_like(v) {
+                    *count += 1;
+                }
+            }
+            off += 16;
+        }
+    }
+    let mut order = [0usize, 1, 2, 3];
+    order.sort_by(|&x, &y| counts[y].cmp(&counts[x]));
+    order
 }
 
 /// Scans with the map's own dims-header geometry. The orientation is
@@ -914,17 +947,22 @@ mod tests {
             eprintln!("RT3_HOME unset; skipping install-backed terrain check");
             return;
         };
-        for (file, lattice, max_min, max_max) in [
+        // (file, lattice, residue mod 4, min relief, max relief)
+        for (file, lattice, residue, max_min, max_max) in [
             (
                 "maps/Crossing the Alps.gmp",
                 (256usize, 256usize),
+                0usize,
                 2000.0f32,
                 2600.0f32,
             ),
-            ("maps/Germany.gmp", (512, 512), 2000.0, 2400.0),
+            ("maps/Germany.gmp", (512, 512), 0, 2000.0, 2400.0),
             // Non-square lattice: orientation resolved by the record
             // extent word (h = 640).
-            ("maps/Alternate USA.gmp", (1024, 640), 1500.0, 2100.0),
+            ("maps/Alternate USA.gmp", (1024, 640), 0, 1500.0, 2100.0),
+            // Odd-length sections shift this map's stream 2 mod 4; the
+            // ranked-alignment scan must find it there.
+            ("maps/Italy.gmp", (384, 448), 2, 1500.0, 2100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {
@@ -943,6 +981,12 @@ mod tests {
                 path.display(),
                 g.offset
             );
+            assert_eq!(
+                g.offset % 4,
+                residue,
+                "{}: alignment residue",
+                path.display()
+            );
             assert!(
                 lo >= -1000.0 && hi >= max_min && hi <= max_max,
                 "{}: range {}..{}",
@@ -951,6 +995,35 @@ mod tests {
                 hi
             );
         }
+    }
+
+    /// Regression (review round 2, finding 2): the multi-hit path
+    /// `scan_all_geo` must be alignment-aware too. Italy's grid sits at
+    /// 2 mod 4 and `scan_all_geo` ranks that alignment first, so its
+    /// first hit must carry the residue — not a 0-mod-4 misread.
+    #[test]
+    fn scan_all_geo_finds_nonzero_residue_grid() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed scan_all_geo check");
+            return;
+        };
+        let path = std::path::Path::new(&home).join("maps/Italy.gmp");
+        let Ok(bytes) = fs::read(&path) else {
+            eprintln!("{} missing; skipping", path.display());
+            return;
+        };
+        let dims = read_dims(&bytes).expect("dims header present");
+        let geo = Geometry::for_lattice(dims.lattice().0, dims.lattice().1);
+        // Bound the multi-hit scan to the grid's own extent so the
+        // debug-mode test stays fast (scan_all_geo walks to EOF).
+        let end = (34_702 + geo.grid_bytes() + 4096).min(bytes.len());
+        let hits = scan_all_geo(&bytes[..end], 0x3000, &geo);
+        assert!(
+            !hits.is_empty(),
+            "scan_all_geo found no grid in {}",
+            path.display()
+        );
+        assert_eq!(hits[0].offset % 4, 2, "first hit must keep Italy's residue");
     }
 
     /// Install-backed check for the headerless pitch-anchored path
@@ -969,6 +1042,8 @@ mod tests {
                 2800.0f32,
             ),
             ("maps/Chicago to New York.gmp", (640, 512), 1500.0, 2100.0),
+            // Pitch-measured width on a non-square headerless map.
+            ("maps/Argentina Opens Up.gmp", (640, 384), 4000.0, 5100.0),
         ] {
             let path = std::path::Path::new(&home).join(file);
             let Ok(bytes) = fs::read(&path) else {
