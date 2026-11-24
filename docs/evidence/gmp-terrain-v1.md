@@ -1,14 +1,14 @@
 # GMP terrain format (v1 — coarse heightfield)
 
 Claim level: **framing and coarse-grid decode proven for all 40 current
-maps, all verified**. Established 2026-11-22/23, milestone 3b, issues
+and three legacy maps, all verified**. Established 2026-11-22/24, milestone 3b, issues
 [#8](https://github.com/diegoami/rt3engine/issues/8) and
 [#9](https://github.com/diegoami/rt3engine/issues/9). Implemented in
 `rt3-kit::terrain` (`crates/rt3-kit/src/terrain.rs`); exposed as
 `rt3ctl map terrain <name>` and `rt3ctl map terrain --all --json`.
 Per-map results: [terrain-scan-v1.json](terrain-scan-v1.json)
-(40 current maps, 40 verified. Pacific Coastal is legacy 9610 and
-outside this scan.)
+(43 shipped maps: 40 current 9701 and three legacy 9609/9610, all
+verified.)
 
 ## Proven: save-path section framing
 
@@ -27,13 +27,15 @@ outside this scan.)
   family tags; fresh in-game saves use 13000-family, e.g. record tag
   `0x32c8`).
 
-## Proven: explicit coarse-grid frame on all 40 maps
+## Proven: explicit coarse-grid frame on all 43 maps
 
-Every current map carries this frame at an arbitrary byte alignment:
+Every shipped map carries this frame at an arbitrary byte alignment.
+Current maps use subsection tag `0x2ee2`; legacy 9609/9610 maps use
+`0x2ee1`, with the remaining layout unchanged:
 
 ```text
 u32 0x32dd                  terrain section
-u32 0x2ee2                  coarse-grid subsection
+u32 0x2ee2 / 0x2ee1         current / legacy coarse-grid subsection
 u32 11001                   framing constant; semantics open
 u32 3002                    framing constant; semantics open
 u32 cols                    stored height columns = lattice_w + 1
@@ -45,7 +47,7 @@ f32 heights[rows][cols+1]   starts immediately at section + 32
 
 `terrain::read_framed` searches for the full signature, bounds-checks
 the geometry, validates at exactly `section + 32`, and extracts every
-cell. All 40 shipped current maps match the signature and pass sampled
+cell. All 43 shipped maps match the signature and pass sampled
 validation plus the full-cell range check. The artifact records the
 resulting offsets, dimensions and statistics. The extra `cols + 1`th
 cell in each stored row is the trailing cell whose semantics remain
@@ -87,7 +89,8 @@ records) shift a map's post-prelude stream by 1–3 bytes, so sections
 and raw rows do not always sit 0-mod-4. Italy's grid sits at **2 mod
 4**. The framed reader checks every byte offset; fallback scans try all
 four alignments ranked by land-like float density. Residues across the
-40 framed grids: 10 at 0, 18 at 1, 6 at 2, 6 at 3 (mod 4).
+40 current maps' framed grids: 10 at 0, 18 at 1, 6 at 2, 6 at 3
+(mod 4).
 
 ## Proven: record extent word anchors fallback height
 
@@ -117,7 +120,8 @@ other heights use a green-brown-white gradient
 scaled between the grid's 5th and 95th height percentiles. The PNG uses
 standard uncompressed-deflate blocks, with CRC-32 and Adler-32
 checksums. Tests decode its stored pixels, check exact orientation and
-water handling, and validate the full pixel buffer for all 40 maps.
+water handling, and validate full pixel buffers separately for all 40
+current maps and all three legacy maps.
 
 ```sh
 rt3ctl map terrain "California Island" --png review-tmp/california.png
@@ -134,7 +138,9 @@ blank, misaligned or transposed result. Examples include California
 Island's diagonal island chain, Argentina's Andes on the western edge
 with plains east, the British Isles coastline, Italy and Japan. Shared
 scenario geography (for example Britain/British Isles and France/Third
-Republic) renders consistently.
+Republic) renders consistently. The three legacy maps were also rendered
+and inspected: Pacific Coastal shows the western coastline and mountain
+spine, and both tutorials show coherent Italy geography.
 
 ## Oracle corroboration (2026-11-23)
 
@@ -209,8 +215,8 @@ bytes are not committed.
 
 `rt3ctl map terrain` uses this order:
 
-1. **verified (40 current maps):** exact start and geometry from
-   `read_framed`.
+1. **verified (43 shipped maps: 40 current, three legacy):** exact start
+   and geometry from `read_framed`.
 2. **verified fallback:** geometry from the older nine-word header,
    with the record extent word resolving non-square orientation.
 3. **pitch-anchored fallback:** record height plus a clearly separated
@@ -225,10 +231,11 @@ bytes are not committed.
    height 256 does the fixed-256 geometry run. No current map needs or
    retains this classification.
 
-The legacy 9610 map Pacific Coastal is outside the current-map scan;
-a direct fallback check measures (320×832) and validates — evidence
-the raw-row layout reaches the legacy format too (not a framed-decode
-claim beyond that).
+Legacy 9609/9610 maps share the frame with subsection tag `0x2ee1`.
+Pacific Coastal decodes at `0x884c` with 321×833 stored cells; Tutorial
+1 and Tutorial 2 decode at `0x87e6` with 385×449. All three are verified
+in the artifact. This supersedes Pacific Coastal's earlier fallback-only
+measurement while leaving non-terrain legacy sections open.
 
 ## Open
 
@@ -241,8 +248,8 @@ claim beyond that).
   quadtree levels (`0x00517d90`) beyond the coarse grids; the
   read-side decoder is still unidentified (only the save path is
   mapped).
-- Legacy 9609/9610 layouts (only Pacific Coastal touched: its fallback
-  geometry measures and validates).
+- Legacy 9609/9610 non-terrain sections and other generation
+  differences; the coarse-grid frame itself is shared and decoded.
 - The `0x407FC0 | k<<24` field at file+0x3008 (from
   [gmp-format-v1.md](gmp-format-v1.md)) — relation to terrain unproven.
 
@@ -252,6 +259,7 @@ claim beyond that).
 export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
 cargo test -p rt3-kit terrain            # fixtures + framed references and fallback regressions
 cargo run -q -p rt3ctl -- map terrain "California Island"
+cargo run -q -p rt3ctl -- map terrain "Pacific Coastal"
 cargo run -q --release -p rt3ctl -- map terrain --all   # the artifact's producer
 make evidence-check                      # includes terrain-scan-v1.json
 ```

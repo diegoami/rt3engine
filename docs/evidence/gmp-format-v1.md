@@ -56,7 +56,8 @@ map-specific tail (terrain + objects; grammar open — see below)
   heightfield) is proven, see [gmp-terrain-v1.md](gmp-terrain-v1.md);
   objects, cities/industries, resources, events remain. The section
   handlers' own reads must be mapped.
-- Legacy versions 9609/9610 layouts.
+- Legacy 9609/9610 non-prelude/non-terrain sections; their coarse grids
+  share the explicit frame described in gmp-terrain-v1.md.
 - Semantics of the extent/config words.
 
 ## Reproduce

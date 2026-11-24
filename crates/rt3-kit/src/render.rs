@@ -251,4 +251,29 @@ mod tests {
             assert_eq!(raw.len(), grid.rows * (1 + grid.cols * 3));
         }
     }
+
+    #[test]
+    fn encodes_every_legacy_map() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed legacy render check");
+            return;
+        };
+        for file in [
+            "maps/Pacific Coastal.gmp",
+            "Data/Tutorial/Tutorial_1.gmp",
+            "Data/Tutorial/Tutorial_2.gmp",
+        ] {
+            let path = std::path::Path::new(&home).join(file);
+            let bytes = fs::read(&path).unwrap();
+            assert!(matches!(
+                crate::map::GmpMap::peek_version(&bytes),
+                Some(9609 | 9610)
+            ));
+            let grid = crate::terrain::read_framed(&bytes).expect("legacy frame");
+            let png = encode_png(&grid);
+            let (w, h, raw) = decode_stored_png(&png);
+            assert_eq!((w as usize, h as usize), (grid.cols, grid.rows));
+            assert_eq!(raw.len(), grid.rows * (1 + grid.cols * 3));
+        }
+    }
 }

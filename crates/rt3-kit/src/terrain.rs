@@ -1,10 +1,12 @@
 //! Terrain heightfield extraction from `.gmp` maps (milestone 3b — see
 //! `docs/evidence/gmp-terrain-v1.md`).
 //!
-//! Proven so far (claim level **framed decode on all 40 current maps**):
+//! Proven so far (claim level **framed decode on all 40 current and
+//! three legacy maps**):
 //!
 //! ```text
-//! 0x32dd, 0x2ee2, 11001, 3002, cols, rows, 11002, 11004
+//! 0x32dd, 0x2ee2 (current) or 0x2ee1 (legacy),
+//! 11001, 3002, cols, rows, 11002, 11004
 //! then uncompressed little-endian f32 heights at frame + 32.
 //! `cols` and `rows` are the (lattice+1) corner dimensions; each
 //! stored row has cols+1 cells (one trailing cell, semantics open).
@@ -90,7 +92,7 @@ impl Geometry {
 
 /// Older terrain dims header: nine u32s after tag `0x2EE2`, present
 /// in 13 shipped maps. The explicit 32-byte coarse-grid frame read by
-/// `read_framed` is preferred on all 40 current maps. The older
+/// `read_framed` is preferred on all 40 current and three legacy maps. The older
 /// observed groupings are tiles, tiles,
 /// lattice, lattice×4 (e.g. Alps: 64,64,64,64,256,256,1024,1024,0 —
 /// coarse corner grid 257×257 over the 256 lattice, 1024×1024 fine
@@ -388,7 +390,8 @@ fn extract(bytes: &[u8], off: usize, geo: &Geometry) -> Option<HeightGrid> {
 }
 
 /// Reads the explicitly framed coarse grid, when present. The terrain
-/// section starts with `0x32dd`, `0x2ee2`, then six words
+/// section starts with `0x32dd`, `0x2ee2` (current) or `0x2ee1`
+/// (legacy), then six words
 /// `(11001, 3002, cols, rows, 11002, 11004)`; the f32 cells begin
 /// immediately after that 32-byte frame. All words are byte-aligned with
 /// the section, which need not be 0 mod 4 in the file.
@@ -398,7 +401,7 @@ pub fn read_framed(bytes: &[u8]) -> Option<HeightGrid> {
         let word =
             |delta| u32::from_le_bytes(bytes[off + delta..off + delta + 4].try_into().unwrap());
         if word(0) == 0x32dd
-            && word(4) == 0x2ee2
+            && (0x2ee1..=0x2ee2).contains(&word(4))
             && word(8) == 11001
             && word(12) == 3002
             && word(24) == 11002
@@ -948,6 +951,8 @@ mod tests {
         let g = read_framed(&d).expect("framed grid");
         assert_eq!(g.offset, base);
         assert_eq!((g.rows, g.cols), (257, 257));
+        d[marker + 4..marker + 8].copy_from_slice(&0x2ee1u32.to_le_bytes());
+        assert_eq!(read_framed(&d).unwrap().offset, base);
         d[marker + 28..marker + 32].copy_from_slice(&0u32.to_le_bytes());
         assert!(read_framed(&d).is_none(), "bad framing must be refused");
     }
@@ -1144,6 +1149,28 @@ mod tests {
         assert_eq!((g.rows, g.cols), (257, 257));
         let (lo, hi) = g.height_range().unwrap();
         assert_eq!((lo, hi), (-454.0, 3_051.079_8));
+    }
+
+    #[test]
+    fn reads_legacy_framed_grids() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed legacy frame check");
+            return;
+        };
+        for (file, offset, rows, cols) in [
+            ("maps/Pacific Coastal.gmp", 0x884c, 833, 321),
+            ("Data/Tutorial/Tutorial_1.gmp", 0x87e6, 449, 385),
+            ("Data/Tutorial/Tutorial_2.gmp", 0x87e6, 449, 385),
+        ] {
+            let path = std::path::Path::new(&home).join(file);
+            let Ok(bytes) = fs::read(&path) else {
+                eprintln!("{} missing; skipping", path.display());
+                return;
+            };
+            let g = read_framed(&bytes).expect("legacy framed grid");
+            assert_eq!(g.offset, offset, "{}", path.display());
+            assert_eq!((g.rows, g.cols), (rows, cols), "{}", path.display());
+        }
     }
 
     /// Install-backed check for the headerless pitch-anchored path

@@ -109,8 +109,8 @@ fn checked_png_path(root: &std::path::Path, out: &std::path::Path) -> Result<Pat
 
 /// Runs `map terrain`: one map (`<name>`) prints statistics plus an
 /// ASCII relief preview and optionally writes a north-up RGB PNG;
-/// `--all` scans every current-format map and prints one summary line
-/// each; `--all --json` emits the machine form that backs
+/// `--all` scans every supported current/legacy map and prints one
+/// summary line each; `--all --json` emits the machine form that backs
 /// `docs/evidence/terrain-scan-v1.json`.
 pub fn run_terrain(t: MapTerrain) -> ExitCode {
     let Some(root) = t
@@ -164,9 +164,9 @@ pub fn run_terrain(t: MapTerrain) -> ExitCode {
             return ExitCode::from(1);
         }
     };
-    if GmpMap::peek_version(&bytes) != Some(9701) {
+    if !matches!(GmpMap::peek_version(&bytes), Some(9609 | 9610 | 9701)) {
         eprintln!(
-            "rt3ctl: {}: not a current-format (9701) map",
+            "rt3ctl: {}: not a supported current/legacy (9701/9609/9610) map",
             path.display()
         );
         return ExitCode::from(1);
@@ -304,8 +304,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             });
             continue;
         };
-        if GmpMap::peek_version(&bytes) != Some(9701) {
-            continue; // legacy layout: separate claim
+        if !matches!(GmpMap::peek_version(&bytes), Some(9609 | 9610 | 9701)) {
+            continue; // unsupported format: separate claim
         }
         let dims = terrain::read_dims(&bytes);
         let scanned = scan_map(&bytes);
