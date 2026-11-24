@@ -55,6 +55,11 @@ the bootstrap applies as written there — one review, not two stages.
 - **merge:** owner — delegated to the implementer on AGREE by decision
   [0002](docs/decisions/0002-delegated-merges.md) (2026-11-22); milestone
   reviews, tags and human-acceptance gates stay with the owner.
+- **ordinary-work loop:** continuous by decision
+  [0003](docs/decisions/0003-continuous-work.md) (2026-11-24) — after a
+  reviewed ticket merges, continue to the next open task without a
+  per-ticket owner prompt; pause only at milestone/owner decision points
+  or protocol escalations. Per-change reviews and gates still apply.
 - **design:** none — OpenCode mode only (`AGENTS.md`, *The two
   stages*).
 - **milestones:** annotated tags `vX.Y.Z` on `main`, as
