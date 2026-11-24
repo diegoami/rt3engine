@@ -9,6 +9,7 @@ use std::process::ExitCode;
 use rt3_kit::map::GmpMap;
 use rt3_kit::render;
 use rt3_kit::terrain;
+use rt3_kit::tiles;
 
 /// Arguments of `rt3ctl map list`.
 pub struct MapList {
@@ -288,6 +289,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         name: String,
         dims: Option<terrain::TerrainDims>,
         grid: Option<(usize, usize, usize, f32, f32, usize, usize)>,
+        tiles: Option<(usize, usize, usize, usize)>,
         status: Option<&'static str>,
         missed: Option<&'static str>,
     }
@@ -299,6 +301,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 name: name.clone(),
                 dims: None,
                 grid: None,
+                tiles: None,
                 status: None,
                 missed: Some("unreadable"),
             });
@@ -315,10 +318,21 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         });
         let status = scanned.as_ref().map(|(_, kind)| kind.as_str());
         let missed = grid.is_none().then_some("no validated grid");
+        let tiles = scanned.as_ref().and_then(|(g, _)| {
+            tiles::read(&bytes, g).map(|t| {
+                (
+                    t.section_offset,
+                    t.records.len(),
+                    t.dynamic_entries(),
+                    t.end_offset,
+                )
+            })
+        });
         rows.push(Row {
             name: name.clone(),
             dims,
             grid,
+            tiles,
             status,
             missed,
         });
@@ -347,6 +361,12 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 ),
                 None => "null".to_string(),
             };
+            let tiles = match &r.tiles {
+                Some((off, records, entries, end)) => format!(
+                    "{{\"section_offset\": {off}, \"records\": {records}, \"dynamic_entries\": {entries}, \"end_offset\": {end}}}"
+                ),
+                None => "null".to_string(),
+            };
             let status = match r.status {
                 Some(st) => format!("\"{st}\""),
                 None => "null".to_string(),
@@ -356,7 +376,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             println!(
-                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"status\": {status}, \"missed\": {missed}}}{comma}",
+                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"tiles\": {tiles}, \"status\": {status}, \"missed\": {missed}}}{comma}",
                 json_escape(&r.name)
             );
         }

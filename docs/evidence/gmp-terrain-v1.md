@@ -148,6 +148,34 @@ stored row after the corner grid: all 21,398 cells in that row are
 semantic purpose; it is consistent with border/filler data but is not
 claimed to be extra terrain.
 
+## Proven: per-cell arrays and per-tile records
+
+The sections formerly known only as `0x2f43`/`0x2f44` now have a complete
+structural walk, implemented as `rt3_kit::tiles` and summarized in each
+artifact row's `tiles` object.
+
+- `RT3.exe 0x00448f60` seeks nested tag `0x9471`, allocates four byte
+  arrays and reads each with length `(rows+1)*(cols+1)` — the complete
+  coarse-frame cell count. Tag `0x9472` follows the four arrays, then
+  `0x2f44` begins the tile records.
+- Tile dimensions are `(cols-1)/4` by `(rows-1)/4`; both divide exactly
+  on all 43 maps. This yields 645,120 records in total.
+- The original record reader `0x0042ae50` reads a 20-byte presence mask,
+  then for indices 0…52 reads an optional `u16` at bit `3i`, another
+  optional `u16` at bit `3i+1`, and an optional f32 at bit `3i+2`, in
+  that interleaved file order. It next reads 12 fixed file-order bytes,
+  a signed 16-bit count, and that many six-byte entries.
+- All 43 walks end exactly at `0x2ee5`. Every record has some present
+  optional value. Nine maps carry all 4,458 dynamic entries; the maximum
+  count in one record is four. The artifact lists each map's total.
+- Incidental `0x2f43` values occur before the real section in Argentina
+  Opens Up, Tex-Mex and Texas Tea. The parser therefore accepts a
+  candidate only after its complete array signature and record walk
+  reaches the terminator, rather than trusting the first tag match.
+
+The parser retains all four arrays, optional values, fixed bytes and
+six-byte entries. Their gameplay field meanings remain open.
+
 ## 2D PNG render
 
 `rt3_kit::render::encode_png` renders every framed grid as a north-up,
@@ -282,10 +310,10 @@ measurement while leaving non-terrain legacy sections open.
   overlapping windows; shipped maps use the explicit frame instead.
 - Minimap row-order comparison currently covers only British Isles,
   Italy and Ireland.
-- Per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0`) and
-  quadtree levels (`0x00517d90`) beyond the coarse grids. The coarse
-  reader is identified at `0x00553240`; the remaining section handlers
-  are not fully mapped.
+- Gameplay meanings of the 53-value arrays, fixed tile bytes and
+  six-byte entries; quadtree levels (`0x00517d90`). Coarse and per-tile
+  readers are identified at `0x00553240`, `0x00448f60` and
+  `0x0042ae50`; the quadtree handler is not fully mapped.
 - Legacy 9609/9610 non-terrain sections and other generation
   differences; the coarse-grid frame itself is shared and decoded.
 - The `0x407FC0 | k<<24` field at file+0x3008 (from
