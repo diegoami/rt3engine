@@ -11,6 +11,7 @@
 //! | `language` | `Data/Language/RT3.lng` | milestone 2 |
 //! | `map` | `maps/*.gmp`, `Data/GrayscaleMaps/*.TGA` | milestone 3 |
 //! | `terrain` | terrain heightfields inside `maps/*.gmp` | milestone 3b |
+//! | `tiles` | per-cell arrays and per-tile terrain records | milestone 3b |
 //! | `render` | north-up RGB PNG views of decoded heightfields | milestone 3b |
 //! | `save` | `Saved Games/*.sav` | milestone 4 |
 //!
@@ -21,12 +22,13 @@
 //!
 //! Status: milestone 1 — `pk4` (PK4 asset archives); milestone 2 — `typed`
 //! (typed game-data records and text/config); milestone 3 — `map`
-//! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield) and
-//! `render` (north-up PNG). The remaining families land with their
-//! milestones.
+//! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield),
+//! `tiles` (per-tile records) and `render` (north-up PNG). The remaining
+//! families land with their milestones.
 
 pub mod map;
 pub mod pk4;
 pub mod render;
 pub mod terrain;
+pub mod tiles;
 pub mod typed;
