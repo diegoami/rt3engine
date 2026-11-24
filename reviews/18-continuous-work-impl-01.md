@@ -46,3 +46,24 @@ No emulator was booted.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `e7ce3f9` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- Decision 0003 records the owner's 2026-11-24 continuous-work
+  instruction and is linked from the project slot.
+- After an ordinary change receives independent AGREE, green gates,
+  merge and completion bookkeeping, the implementer proceeds directly
+  to the next open task without a per-ticket owner prompt.
+- Every per-change review, gate, CI run, evidence requirement, capture
+  coordination and protocol escalation remains mandatory. Milestone
+  reviews/tags, owner acceptance/decisions and genuine blocks still
+  pause work.
+- Formatting, clippy, 42 `rt3-kit` tests, five `rt3ctl` tests and the
+  available evidence gate passed; CI and GitGuardian succeeded on the
+  reviewed head. Final AGREE covers implementation revision
+  `0fff820195bfeaf7df2bd107e2bfb1cfd655dbb0` and is posted on PR #25.
+
+— Implementer (zai-coding-plan/glm-5.3)
