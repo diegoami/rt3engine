@@ -1152,6 +1152,43 @@ mod tests {
     }
 
     #[test]
+    fn trailing_cells_match_observed_border_pattern() {
+        let Ok(home) = std::env::var("RT3_HOME") else {
+            eprintln!("RT3_HOME unset; skipping install-backed trailing-cell check");
+            return;
+        };
+        let mut paths = Vec::new();
+        for dir in ["maps", "Data/Tutorial"] {
+            let read_dir = fs::read_dir(std::path::Path::new(&home).join(dir)).unwrap();
+            paths.extend(
+                read_dir
+                    .filter_map(|e| e.ok().map(|e| e.path()))
+                    .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("gmp")),
+            );
+        }
+        paths.sort();
+        assert_eq!(paths.len(), 43);
+        let mut total_rows = 0;
+        for path in paths {
+            let bytes = fs::read(&path).unwrap();
+            let g = read_framed(&bytes).expect("framed grid");
+            let name = path.file_stem().unwrap().to_string_lossy();
+            let border = if matches!(name.as_ref(), "Alternate USA" | "Coast to Coast") {
+                330.650_36
+            } else {
+                0.0
+            };
+            for r in 0..g.rows {
+                let expected = if r + 1 == g.rows { 0.0 } else { border };
+                let trailing = cell(&bytes, g.offset + (r * (g.cols + 1) + g.cols) * 4).unwrap();
+                assert_eq!(trailing, expected, "{} row {r}", path.display());
+            }
+            total_rows += g.rows;
+        }
+        assert_eq!(total_rows, 19_755);
+    }
+
+    #[test]
     fn reads_legacy_framed_grids() {
         let Ok(home) = std::env::var("RT3_HOME") else {
             eprintln!("RT3_HOME unset; skipping install-backed legacy frame check");
