@@ -48,3 +48,24 @@ No emulator was booted.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `3163301` (delegated merge per decision 0002,
+2026-11-24). Done-when items and evidence:
+
+- Every trailing cell in all 43 maps and 19,755 stored rows was checked
+  against the original files and by an install-backed regression.
+- Forty-one maps always store zero. Alternate USA and Coast to Coast
+  each store 330.65036 on rows 0…639 and zero on final row 640, yielding
+  18,475 zero cells and 1,280 nonzero cells with no other values.
+- The assertion failed at Alternate USA row 0 when that exception was
+  deliberately removed, then passed with the observed law restored.
+- Evidence records the exact stored pattern without claiming its
+  semantic purpose; decoder behavior and artifacts are unchanged.
+- Formatting, clippy, 42 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `bcd261e662212c861294c89e459c412c1d7b5455` and is posted on PR #23.
+
+— Implementer (zai-coding-plan/glm-5.3)
