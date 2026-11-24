@@ -7,9 +7,9 @@
 //! ```text
 //! 0x32dd, 0x2ee2 (current) or 0x2ee1 (legacy),
 //! 11001, 3002, cols, rows, 11002, 11004
-//! then uncompressed little-endian f32 heights at frame + 32.
-//! `cols` and `rows` are the (lattice+1) corner dimensions; each
-//! stored row has cols+1 cells (one trailing cell, semantics open).
+//! then (rows+1)*(cols+1) uncompressed little-endian f32 cells at
+//! frame + 32. `cols` and `rows` are the (lattice+1) corner dimensions;
+//! the trailing column and final stored row are not returned heights.
 //! ```
 //!
 //! `read_framed` is the preferred path: the frame determines the exact
@@ -392,9 +392,11 @@ fn extract(bytes: &[u8], off: usize, geo: &Geometry) -> Option<HeightGrid> {
 /// Reads the explicitly framed coarse grid, when present. The terrain
 /// section starts with `0x32dd`, `0x2ee2` (current) or `0x2ee1`
 /// (legacy), then six words
-/// `(11001, 3002, cols, rows, 11002, 11004)`; the f32 cells begin
-/// immediately after that 32-byte frame. All words are byte-aligned with
-/// the section, which need not be 0 mod 4 in the file.
+/// `(11001, 3002, cols, rows, 11002, 11004)`; `(rows+1)*(cols+1)`
+/// f32 cells begin immediately after that 32-byte frame. The final
+/// stored row and column are padding/border data, not returned corner
+/// heights. All words are byte-aligned with the section, which need not
+/// be 0 mod 4 in the file.
 pub fn read_framed(bytes: &[u8]) -> Option<HeightGrid> {
     let mut off = 0x3000usize.min(bytes.len());
     while off + 32 <= bytes.len() {
@@ -416,8 +418,15 @@ pub fn read_framed(bytes: &[u8]) -> Option<HeightGrid> {
                     row_cells: cols + 1,
                 };
                 let start = off + 32;
-                if start + geo.grid_bytes() <= bytes.len() && validate(bytes, start, &geo) {
-                    return extract(bytes, start, &geo);
+                let stored_cells = (rows + 1) * (cols + 1);
+                if start + stored_cells * 4 <= bytes.len() && validate(bytes, start, &geo) {
+                    let full_range = (0..stored_cells).all(|i| {
+                        let v = cell(bytes, start + i * 4).unwrap();
+                        v.is_nan() || (MIN_HEIGHT..=MAX_HEIGHT).contains(&v)
+                    });
+                    if full_range {
+                        return extract(bytes, start, &geo);
+                    }
                 }
             }
         }
@@ -936,6 +945,9 @@ mod tests {
     fn framed_grid_uses_exact_section_start() {
         let (mut d, base) = fixture_lattice(256, 256);
         let marker = base - 32;
+        let framed_end = base + 258 * 258 * 4;
+        d.resize(framed_end, 0);
+        d[base + 257 * 258 * 4..framed_end].fill(0);
         for (off, value) in [
             (marker, 0x32ddu32),
             (marker + 4, 0x2ee2),
@@ -953,6 +965,18 @@ mod tests {
         assert_eq!((g.rows, g.cols), (257, 257));
         d[marker + 4..marker + 8].copy_from_slice(&0x2ee1u32.to_le_bytes());
         assert_eq!(read_framed(&d).unwrap().offset, base);
+        let mut truncated = d.clone();
+        truncated.truncate(framed_end - 4);
+        assert!(
+            read_framed(&truncated).is_none(),
+            "missing final stored row must be refused"
+        );
+        let mut bad_final_row = d.clone();
+        bad_final_row[framed_end - 4..framed_end].copy_from_slice(&10_000.0f32.to_le_bytes());
+        assert!(
+            read_framed(&bad_final_row).is_none(),
+            "invalid final-row cell must be refused"
+        );
         d[marker + 28..marker + 32].copy_from_slice(&0u32.to_le_bytes());
         assert!(read_framed(&d).is_none(), "bad framing must be refused");
     }
@@ -1152,7 +1176,7 @@ mod tests {
     }
 
     #[test]
-    fn trailing_cells_match_observed_border_pattern() {
+    fn trailing_cells_and_final_row_match_observed_pattern() {
         let Ok(home) = std::env::var("RT3_HOME") else {
             eprintln!("RT3_HOME unset; skipping install-backed trailing-cell check");
             return;
@@ -1169,6 +1193,7 @@ mod tests {
         paths.sort();
         assert_eq!(paths.len(), 43);
         let mut total_rows = 0;
+        let mut final_row_cells = 0;
         for path in paths {
             let bytes = fs::read(&path).unwrap();
             let g = read_framed(&bytes).expect("framed grid");
@@ -1183,9 +1208,15 @@ mod tests {
                 let trailing = cell(&bytes, g.offset + (r * (g.cols + 1) + g.cols) * 4).unwrap();
                 assert_eq!(trailing, expected, "{} row {r}", path.display());
             }
+            for c in 0..g.cols + 1 {
+                let final_cell = cell(&bytes, g.offset + (g.rows * (g.cols + 1) + c) * 4).unwrap();
+                assert_eq!(final_cell, 0.0, "{} final row col {c}", path.display());
+            }
+            final_row_cells += g.cols + 1;
             total_rows += g.rows;
         }
         assert_eq!(total_rows, 19_755);
+        assert_eq!(final_row_cells, 21_398);
     }
 
     #[test]

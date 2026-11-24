@@ -27,6 +27,23 @@ verified.)
   family tags; fresh in-game saves use 13000-family, e.g. record tag
   `0x32c8`).
 
+## Proven: executable coarse-grid read/write paths
+
+- `RT3.exe 0x0044cfb0` is the higher-level terrain loader and calls
+  `0x00553240` at `0x0044cffb`. In this read path,
+  `0x00531360(this, tag)` seeks a section tag and
+  `0x00531150(this, dst, size, ...)` reads payload.
+- `0x00553240` seeks `0x2af9`, reads `0xbba`, `cols` and `rows`, then
+  seeks `0x2afa` and reads the layout tag. For the observed `0x2afc`
+  layout, `0x00553319`…`0x0055334d` computes
+  `(cols+1)*(rows+1)` and reads exactly that many f32 cells into the
+  coarse-height buffer. A separate `0x2afb` branch exists but is not
+  used by any shipped map.
+- `0x00553760` is the matching writer: `0x005537eb`…`0x00553868`
+  writes the same tags, constants and dimensions, computes the same
+  `(cols+1)*(rows+1)` cell count and writes the f32 array. This
+  independently establishes the full stored extent.
+
 ## Proven: explicit coarse-grid frame on all 43 maps
 
 Every shipped map carries this frame at an arbitrary byte alignment.
@@ -36,22 +53,24 @@ Current maps use subsection tag `0x2ee2`; legacy 9609/9610 maps use
 ```text
 u32 0x32dd                  terrain section
 u32 0x2ee2 / 0x2ee1         current / legacy coarse-grid subsection
-u32 11001                   framing constant; semantics open
-u32 3002                    framing constant; semantics open
-u32 cols                    stored height columns = lattice_w + 1
-u32 rows                    stored height rows    = lattice_h + 1
-u32 11002                   framing constant; semantics open
-u32 11004                   framing constant; semantics open
-f32 heights[rows][cols+1]   starts immediately at section + 32
+u32 11001 (0x2af9)          coarse record tag
+u32 3002  (0x0bba)          constant; semantics open
+u32 cols                    corner height columns = lattice_w + 1
+u32 rows                    corner height rows    = lattice_h + 1
+u32 11002 (0x2afa)          array group tag
+u32 11004 (0x2afc)          observed array-layout tag
+f32 cells[(rows+1)*(cols+1)] starts immediately at section + 32
 ```
 
 `terrain::read_framed` searches for the full signature, bounds-checks
-the geometry, validates at exactly `section + 32`, and extracts every
-cell. All 43 shipped maps match the signature and pass sampled
-validation plus the full-cell range check. The artifact records the
-resulting offsets, dimensions and statistics. The extra `cols + 1`th
-cell in each stored row is the trailing cell whose semantics remain
-open; it is not part of the corner-height grid.
+the complete `(rows+1)*(cols+1)` extent, validates at exactly
+`section + 32`, range-checks every stored cell and extracts the corner
+grid. All 43 shipped maps match the signature and pass validation. The
+artifact records the returned offsets, dimensions and statistics. The
+extra `cols + 1`th cell in each row and the additional final stored row
+are not part of the corner-height grid. An earlier version of this
+document omitted that final row; the executable read/write paths and
+the all-map data correct the extent.
 
 This supersedes the earlier scan-derived offsets: those validated
 windows overlapped the real grids but began **84–96 bytes too early**
@@ -104,16 +123,16 @@ the older header (256…768 across the current maps).
 
 The coarse heights are stored **uncompressed** as little-endian f32
 metres. The frame's `rows` and `cols` are the `(lattice+1)` corner
-samples; each stored row has one additional trailing cell. Water is
-0.0 or NaN. Windows validate by value range, ≥5% land, ≤80% NaN,
+samples; storage has one additional trailing cell per row and one
+additional final row. Water is 0.0 or NaN. Windows validate by value range, ≥5% land, ≤80% NaN,
 smoothness and ≥10 m relief; geometries below the sampler's 33-cell
 floor or above the bounded parser limit are rejected rather than
 mis-sampled.
 
-## Observed: trailing-cell values
+## Observed: trailing column and final row
 
 The trailing cells follow an exact pattern across all 43 maps and 19,755
-stored rows:
+corner-grid rows:
 
 - On 41 maps, every trailing cell is `0.0`.
 - Alternate USA and Coast to Coast each have `330.65036` on rows
@@ -122,10 +141,12 @@ stored rows:
 - Thus 18,475 trailing cells are zero and the other 1,280 are the shared
   nonzero constant. No other nonzero trailing value occurs.
 
-`trailing_cells_match_observed_border_pattern` checks every one of these
-cells against the original maps. This establishes the stored pattern,
-not its semantic purpose; it is consistent with border/filler data but
-is not claimed to be an extra terrain column.
+`trailing_cells_and_final_row_match_observed_pattern` checks every one
+of these cells against the original maps. It also checks the additional
+stored row after the corner grid: all 21,398 cells in that row are
+`0.0` across the 43 maps. This establishes the stored pattern, not its
+semantic purpose; it is consistent with border/filler data but is not
+claimed to be extra terrain.
 
 ## 2D PNG render
 
@@ -256,15 +277,15 @@ measurement while leaving non-terrain legacy sections open.
 
 ## Open
 
-- Semantics of the frame constants (11001, 3002, 11002, 11004) and of
-  each stored row's trailing cell. Fallback scans can still validate
-  overlapping windows; current maps use the explicit frame instead.
+- Semantics of `0xbba`, the border/final-row values and the unobserved
+  `0x2afb` array-layout branch. Fallback scans can still validate
+  overlapping windows; shipped maps use the explicit frame instead.
 - Minimap row-order comparison currently covers only British Isles,
   Italy and Ireland.
 - Per-tile records (`0x2f43`/`0x2f44`, writer `0x0042b4a0`) and
-  quadtree levels (`0x00517d90`) beyond the coarse grids; the
-  read-side decoder is still unidentified (only the save path is
-  mapped).
+  quadtree levels (`0x00517d90`) beyond the coarse grids. The coarse
+  reader is identified at `0x00553240`; the remaining section handlers
+  are not fully mapped.
 - Legacy 9609/9610 non-terrain sections and other generation
   differences; the coarse-grid frame itself is shared and decoded.
 - The `0x407FC0 | k<<24` field at file+0x3008 (from
