@@ -42,3 +42,26 @@ Parser review: capacity is capped at 1,024 before allocation; record and blob re
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `a3d1738` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- Shared sparse-blob parsing covers every building and event collection
+  with checked arithmetic, level payloads, sparse masks, active guards,
+  exact blob lengths/terminators and fallible storage.
+- All 43 maps reconcile at 2,450 building slots/2,044 records and 1,810
+  event slots/1,169 records. Raw building labels and event names/text
+  are retained, including Latin-1 bytes. Artifact summaries add counts
+  and offsets while every previous field remains unchanged.
+- Event level/name tests and all-map totals pass. The city active guard,
+  allocation wording and direct malformed/truncation checks address its
+  review follow-up. A separate non-blocking note records the remaining
+  assertion-strength/test-hardening work.
+- Formatting, clippy, 50 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `792b858616a5dc8245c03aeb5d06b9916bc0dec2` and is posted on PR #28.
+
+— Implementer (zai-coding-plan/glm-5.3)
