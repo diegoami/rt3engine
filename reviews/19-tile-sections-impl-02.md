@@ -34,3 +34,28 @@ No remaining findings. Round-one blocking findings on speculative allocation and
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `be38fdd` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- `rt3_kit::tiles` retains four full per-cell arrays and every tile
+  record: presence mask, 53 interleaved optional triples, fixed bytes
+  and counted six-byte entries.
+- All 43 maps walk exactly to `0x2ee5`: 645,120 records and 4,458
+  dynamic entries across nine maps, maximum four. The artifact records
+  per-map summaries while every previous field remains unchanged.
+- Checked dimensions/offsets, cell/record/dynamic caps, a 40 MiB eager
+  budget and fallible reservations reject oversized public metadata
+  before large allocation or overflow. Round-1 constructed failures and
+  the sparse interleaving fixture gap are resolved.
+- Synthetic optional/dynamic/terminator/truncation tests and all-map
+  totals pass; the terminator regression was observed failing with its
+  check bypassed. Gameplay meanings and quadtree handling remain open.
+- Formatting, clippy, 45 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `cc7a976e3dd2221daa4c36725d3d335f8cb0cc4c` and is posted on PR #26.
+
+— Implementer (zai-coding-plan/glm-5.3)
