@@ -41,3 +41,27 @@ The live inventory producer, run against the read-only `RT3_HOME`, exactly match
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `86aac81` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- `rt3_kit::save` parses the original version-9701 GMC fixture through
+  terrain, tiles, cities, buildings and events; missing sections or other
+  versions reject it. `rt3ctl save inspect` is read-only with deterministic
+  JSON.
+- The 8,490,851-byte fixture has verified SHA-256
+  `3c11cbbdde844273c499086a8a4c23df9e1cfe9837910696fa13bf32d121d99b`,
+  257×385 terrain, 6,144 tiles, 59 cities, 410 buildings and 17 events.
+  `save-inventory-v1.json` exactly matches its producer.
+- SHA-256 known-vector and original-save tests pass; the vector caught a
+  padding defect before fixture use. Optional `RT3_SAVE` tests/evidence
+  work set and unset, and save bytes remain gitignored.
+- Round-1 live-inventory drift was corrected from the current read-only
+  installation; both evidence-check modes pass. Formatting, clippy, 53
+  `rt3-kit` tests, five `rt3ctl` tests and CI/GitGuardian are green.
+- Final AGREE covers implementation revision
+  `67374e5646e5297ca5a8ac7be032c5671534397c` and is posted on PR #31.
+
+— Implementer (zai-coding-plan/glm-5.3)
