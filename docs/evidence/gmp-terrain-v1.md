@@ -89,7 +89,8 @@ records) shift a map's post-prelude stream by 1–3 bytes, so sections
 and raw rows do not always sit 0-mod-4. Italy's grid sits at **2 mod
 4**. The framed reader checks every byte offset; fallback scans try all
 four alignments ranked by land-like float density. Residues across the
-40 framed grids: 10 at 0, 18 at 1, 6 at 2, 6 at 3 (mod 4).
+40 current maps' framed grids: 10 at 0, 18 at 1, 6 at 2, 6 at 3
+(mod 4).
 
 ## Proven: record extent word anchors fallback height
 
@@ -119,7 +120,8 @@ other heights use a green-brown-white gradient
 scaled between the grid's 5th and 95th height percentiles. The PNG uses
 standard uncompressed-deflate blocks, with CRC-32 and Adler-32
 checksums. Tests decode its stored pixels, check exact orientation and
-water handling, and validate the full pixel buffer for all 40 maps.
+water handling, and validate full pixel buffers separately for all 40
+current maps and all three legacy maps.
 
 ```sh
 rt3ctl map terrain "California Island" --png review-tmp/california.png
