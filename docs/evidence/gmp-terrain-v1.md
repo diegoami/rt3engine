@@ -110,6 +110,23 @@ smoothness and ≥10 m relief; geometries below the sampler's 33-cell
 floor or above the bounded parser limit are rejected rather than
 mis-sampled.
 
+## Observed: trailing-cell values
+
+The trailing cells follow an exact pattern across all 43 maps and 19,755
+stored rows:
+
+- On 41 maps, every trailing cell is `0.0`.
+- Alternate USA and Coast to Coast each have `330.65036` on rows
+  0…639 and `0.0` on their final row 640. Neither value column is part
+  of the returned corner-height grid.
+- Thus 18,475 trailing cells are zero and the other 1,280 are the shared
+  nonzero constant. No other nonzero trailing value occurs.
+
+`trailing_cells_match_observed_border_pattern` checks every one of these
+cells against the original maps. This establishes the stored pattern,
+not its semantic purpose; it is consistent with border/filler data but
+is not claimed to be an extra terrain column.
+
 ## 2D PNG render
 
 `rt3_kit::render::encode_png` renders every framed grid as a north-up,
