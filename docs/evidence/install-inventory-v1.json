@@ -1,8 +1,8 @@
 {
   "root": "Railroad Tycoon 3",
   "total": {
-    "files": 1176,
-    "bytes": 2023435869
+    "files": 1177,
+    "bytes": 2031926720
   },
   "top_level": {
     "CPUInfo.exe": {
@@ -46,8 +46,8 @@
       "bytes": 35635
     },
     "Saved Games": {
-      "files": 0,
-      "bytes": 0
+      "files": 1,
+      "bytes": 8490851
     },
     "Screenshots": {
       "files": 0,
@@ -198,6 +198,10 @@
     "g": {
       "files": 5,
       "bytes": 2552
+    },
+    "gmc": {
+      "files": 1,
+      "bytes": 8490851
     },
     "gmp": {
       "files": 43,

@@ -13,6 +13,7 @@ set -u
 
 mode="${1:-}"
 RT3_HOME="${RT3_HOME:-}"
+RT3_SAVE="${RT3_SAVE:-}"
 CARGO="${CARGO:-cargo}"
 
 if [ "$mode" != "check" ] && [ "$mode" != "regen" ]; then
@@ -73,4 +74,9 @@ process docs/evidence/pk4-archives-v1.json pk4 list --json || status=$?
 process docs/evidence/typed-tables-v1.json typed list --json || status=$?
 process docs/evidence/maps-inventory-v1.json map list --json || status=$?
 process --release docs/evidence/terrain-scan-v1.json map terrain --all --json || status=$?
+if [ -n "$RT3_SAVE" ]; then
+    process --release docs/evidence/save-inventory-v1.json save inspect --path "$RT3_SAVE" --json || status=$?
+else
+    echo "RT3_SAVE unset; skipping optional save-inventory-$mode"
+fi
 exit "$status"

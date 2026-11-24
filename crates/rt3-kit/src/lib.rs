@@ -27,7 +27,8 @@
 //! (typed game-data records and text/config); milestone 3 — `map`
 //! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield),
 //! `tiles` (per-tile records), `cities`, `buildings`, `events` and
-//! `render` (north-up PNG). The remaining families land with their milestones.
+//! `render` (north-up PNG); milestone 4 — `save` (original GMC structural
+//! inventory). The remaining families land with their milestones.
 
 pub mod buildings;
 pub mod cities;
@@ -35,6 +36,7 @@ pub mod events;
 pub mod map;
 pub mod pk4;
 pub mod render;
+pub mod save;
 mod sparse;
 pub mod terrain;
 pub mod tiles;
