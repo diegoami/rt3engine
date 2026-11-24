@@ -14,6 +14,7 @@ set -u
 mode="${1:-}"
 RT3_HOME="${RT3_HOME:-}"
 RT3_SAVE="${RT3_SAVE:-}"
+RT3_CONTROL_SAVE="${RT3_CONTROL_SAVE:-}"
 CARGO="${CARGO:-cargo}"
 
 if [ "$mode" != "check" ] && [ "$mode" != "regen" ]; then
@@ -78,5 +79,10 @@ if [ -n "$RT3_SAVE" ]; then
     process --release docs/evidence/save-inventory-v1.json save inspect --path "$RT3_SAVE" --json || status=$?
 else
     echo "RT3_SAVE unset; skipping optional save-inventory-$mode"
+fi
+if [ -n "$RT3_CONTROL_SAVE" ]; then
+    process --release docs/evidence/controlled-save-inventory-v1.json save inspect --path "$RT3_CONTROL_SAVE" --json || status=$?
+else
+    echo "RT3_CONTROL_SAVE unset; skipping optional controlled-save-inventory-$mode"
 fi
 exit "$status"

@@ -1,4 +1,4 @@
-//! `rt3ctl save inspect` — read-only original `.gmc` inventory.
+//! `rt3ctl save inspect` — read-only original `.gmc`/`.gms` inventory.
 
 use std::fs;
 use std::path::PathBuf;

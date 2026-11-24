@@ -2,7 +2,7 @@
   "root": "Railroad Tycoon 3",
   "total": {
     "files": 1177,
-    "bytes": 2031926720
+    "bytes": 2032240149
   },
   "top_level": {
     "CPUInfo.exe": {
@@ -11,7 +11,7 @@
     },
     "Data": {
       "files": 790,
-      "bytes": 927576454
+      "bytes": 927576258
     },
     "GameuxInstallHelper.dll": {
       "files": 1,
@@ -69,10 +69,6 @@
       "files": 35,
       "bytes": 291822753
     },
-    "__redist": {
-      "files": 0,
-      "bytes": 0
-    },
     "__support": {
       "files": 0,
       "bytes": 0
@@ -103,7 +99,7 @@
     },
     "goglog.ini": {
       "files": 1,
-      "bytes": 295
+      "bytes": 559
     },
     "manual.pdf": {
       "files": 1,
@@ -115,7 +111,7 @@
     },
     "unins000.dat": {
       "files": 1,
-      "bytes": 314113
+      "bytes": 627474
     },
     "unins000.exe": {
       "files": 1,
@@ -181,7 +177,7 @@
     },
     "dat": {
       "files": 3,
-      "bytes": 372057
+      "bytes": 685418
     },
     "dll": {
       "files": 5,
@@ -221,7 +217,7 @@
     },
     "ini": {
       "files": 2,
-      "bytes": 55207
+      "bytes": 55471
     },
     "js": {
       "files": 3,
@@ -277,7 +273,7 @@
     },
     "txt": {
       "files": 6,
-      "bytes": 13621
+      "bytes": 13425
     },
     "zip": {
       "files": 1,

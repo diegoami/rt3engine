@@ -1,0 +1,11 @@
+{
+  "file": "rt3engine-bi-18290101-202.gms",
+  "version": 9701,
+  "file_bytes": 10285120,
+  "sha256": "f892bc28ea1fb3bb1ff60f3ed443e82de7818d3fd7a7c26a93e974cfb69ac6bc",
+  "terrain": {"grid_offset": 33069, "rows": 513, "cols": 321, "min_height_m": 0.0, "max_height_m": 760.5},
+  "tiles": {"section_offset": 3574574, "records": 10240, "dynamic_entries": 0, "end_offset": 4975874},
+  "cities": {"section_offset": 5817066, "capacity": 70, "records": 68, "end_offset": 5879243},
+  "buildings": {"section_offset": 5096090, "capacity": 530, "records": 520, "end_offset": 5616761},
+  "events": {"section_offset": 5992027, "capacity": 50, "records": 39, "end_offset": 6078483}
+}
