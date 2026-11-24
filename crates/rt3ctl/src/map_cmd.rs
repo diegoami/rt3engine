@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use rt3_kit::cities;
 use rt3_kit::map::GmpMap;
 use rt3_kit::render;
 use rt3_kit::terrain;
@@ -290,6 +291,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         dims: Option<terrain::TerrainDims>,
         grid: Option<(usize, usize, usize, f32, f32, usize, usize)>,
         tiles: Option<(usize, usize, usize, usize)>,
+        cities: Option<(usize, usize, usize, usize)>,
         status: Option<&'static str>,
         missed: Option<&'static str>,
     }
@@ -302,6 +304,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 dims: None,
                 grid: None,
                 tiles: None,
+                cities: None,
                 status: None,
                 missed: Some("unreadable"),
             });
@@ -328,11 +331,14 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 )
             })
         });
+        let cities = cities::read(&bytes)
+            .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         rows.push(Row {
             name: name.clone(),
             dims,
             grid,
             tiles,
+            cities,
             status,
             missed,
         });
@@ -367,6 +373,12 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 ),
                 None => "null".to_string(),
             };
+            let cities = match &r.cities {
+                Some((off, capacity, records, end)) => format!(
+                    "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}}}"
+                ),
+                None => "null".to_string(),
+            };
             let status = match r.status {
                 Some(st) => format!("\"{st}\""),
                 None => "null".to_string(),
@@ -376,7 +388,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             println!(
-                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"tiles\": {tiles}, \"status\": {status}, \"missed\": {missed}}}{comma}",
+                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"tiles\": {tiles}, \"cities\": {cities}, \"status\": {status}, \"missed\": {missed}}}{comma}",
                 json_escape(&r.name)
             );
         }
