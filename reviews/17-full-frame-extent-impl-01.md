@@ -58,3 +58,26 @@ None, blocking or non-blocking.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `e8a1dc4` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- Static RE identifies `0x00553240` as the coarse-grid reader called by
+  `0x0044cfb0`, with `0x00553760` as writer. Both establish the observed
+  `0x2afc` payload as `(cols+1)*(rows+1)` f32 cells.
+- `read_framed` now requires and range-checks the complete stored array
+  while returning only the corner grid. All 43 original maps pass with
+  no artifact drift.
+- Every additional final-row cell is zero: 21,398 cells across all 43
+  maps, checked by the extended install-backed regression.
+- Synthetic truncation and invalid-final-row assertions failed against
+  old/bypassed behavior and pass with the fix. Tags/layout and remaining
+  open semantics are recorded without broadening the unobserved branch.
+- Formatting, clippy, 42 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `4a8e0947c3e8209e02fcef3d810783062208a36f` and is posted on PR #24.
+
+— Implementer (zai-coding-plan/glm-5.3)
