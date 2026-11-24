@@ -7,7 +7,10 @@ use crate::terrain::HeightGrid;
 
 pub const PRESENCE_BYTES: usize = 20;
 pub const ARRAY_LEN: usize = 53;
-const MAX_TILE_RECORDS: usize = 1_000_000;
+const MAX_CELL_ARRAY_CELLS: usize = 1_048_576;
+const MAX_TILE_RECORDS: usize = 65_536;
+const MAX_DYNAMIC_ENTRIES: usize = 1_000_000;
+const MAX_PARSE_RESERVE: usize = 40 * 1024 * 1024;
 
 /// One `0x2f44` tile record. Optional values absent from the presence
 /// mask are zero, matching the original reader's initialized record.
@@ -43,10 +46,39 @@ impl TileSections {
     }
 }
 
+struct Layout {
+    cells: usize,
+    tile_count: usize,
+}
+
+fn layout(grid: &HeightGrid) -> Option<Layout> {
+    if grid.cols < 5
+        || grid.rows < 5
+        || !(grid.cols - 1).is_multiple_of(4)
+        || !(grid.rows - 1).is_multiple_of(4)
+    {
+        return None;
+    }
+    let cells = grid
+        .rows
+        .checked_add(1)?
+        .checked_mul(grid.cols.checked_add(1)?)?;
+    let tile_count = ((grid.cols - 1) / 4).checked_mul((grid.rows - 1) / 4)?;
+    if cells > MAX_CELL_ARRAY_CELLS || tile_count > MAX_TILE_RECORDS {
+        return None;
+    }
+    let reserve = cells
+        .checked_mul(4)?
+        .checked_add(tile_count.checked_mul(std::mem::size_of::<TileRecord>())?)?;
+    if reserve > MAX_PARSE_RESERVE {
+        return None;
+    }
+    Some(Layout { cells, tile_count })
+}
+
 fn u32_at(bytes: &[u8], off: usize) -> Option<u32> {
-    Some(u32::from_le_bytes(
-        bytes.get(off..off + 4)?.try_into().ok()?,
-    ))
+    let end = off.checked_add(4)?;
+    Some(u32::from_le_bytes(bytes.get(off..end)?.try_into().ok()?))
 }
 
 fn take<'a>(bytes: &'a [u8], off: &mut usize, len: usize) -> Option<&'a [u8]> {
@@ -61,35 +93,31 @@ fn present(mask: &[u8; PRESENCE_BYTES], bit: usize) -> bool {
 }
 
 fn parse_candidate(bytes: &[u8], grid: &HeightGrid, section: usize) -> Option<TileSections> {
-    if grid.cols < 5
-        || grid.rows < 5
-        || !(grid.cols - 1).is_multiple_of(4)
-        || !(grid.rows - 1).is_multiple_of(4)
-    {
-        return None;
-    }
-    let cells = (grid.rows + 1) * (grid.cols + 1);
+    let Layout { cells, tile_count } = layout(grid)?;
     let cell_data_offset = section.checked_add(8)?;
     let arrays_bytes = cells.checked_mul(4)?;
     let end_arrays = cell_data_offset.checked_add(arrays_bytes)?;
+    let nested_tag = section.checked_add(4)?;
+    let records_tag = end_arrays.checked_add(4)?;
     if u32_at(bytes, section)? != 0x2f43
-        || u32_at(bytes, section + 4)? != 0x9471
+        || u32_at(bytes, nested_tag)? != 0x9471
         || u32_at(bytes, end_arrays)? != 0x9472
-        || u32_at(bytes, end_arrays + 4)? != 0x2f44
+        || u32_at(bytes, records_tag)? != 0x2f44
     {
         return None;
     }
-    let cell_arrays = std::array::from_fn(|i| {
-        let start = cell_data_offset + i * cells;
-        bytes[start..start + cells].to_vec()
-    });
-    let tile_count = ((grid.cols - 1) / 4) * ((grid.rows - 1) / 4);
-    if tile_count > MAX_TILE_RECORDS {
-        return None;
+    let mut cell_arrays: [Vec<u8>; 4] = Default::default();
+    for (i, array) in cell_arrays.iter_mut().enumerate() {
+        let start = i.checked_mul(cells)?.checked_add(cell_data_offset)?;
+        let end = start.checked_add(cells)?;
+        array.try_reserve_exact(cells).ok()?;
+        array.extend_from_slice(bytes.get(start..end)?);
     }
-    let records_offset = end_arrays + 8;
+    let records_offset = end_arrays.checked_add(8)?;
     let mut off = records_offset;
-    let mut records = Vec::with_capacity(tile_count);
+    let mut records = Vec::new();
+    records.try_reserve_exact(tile_count).ok()?;
+    let mut dynamic_entries = 0usize;
     for _ in 0..tile_count {
         let presence: [u8; PRESENCE_BYTES] =
             take(bytes, &mut off, PRESENCE_BYTES)?.try_into().ok()?;
@@ -112,7 +140,12 @@ fn parse_candidate(bytes: &[u8], grid: &HeightGrid, section: usize) -> Option<Ti
         if count < 0 {
             return None;
         }
-        let mut entries = Vec::with_capacity(count as usize);
+        dynamic_entries = dynamic_entries.checked_add(count as usize)?;
+        if dynamic_entries > MAX_DYNAMIC_ENTRIES {
+            return None;
+        }
+        let mut entries = Vec::new();
+        entries.try_reserve_exact(count as usize).ok()?;
         for _ in 0..count {
             entries.push(take(bytes, &mut off, 6)?.try_into().ok()?);
         }
@@ -143,7 +176,7 @@ fn parse_candidate(bytes: &[u8], grid: &HeightGrid, section: usize) -> Option<Ti
 /// accepted only after their full array and record walk reaches `0x2ee5`.
 pub fn read(bytes: &[u8], grid: &HeightGrid) -> Option<TileSections> {
     let mut off = grid.offset.saturating_sub(32);
-    while off + 4 <= bytes.len() {
+    while off <= bytes.len().saturating_sub(4) {
         if u32_at(bytes, off) == Some(0x2f43) {
             if let Some(sections) = parse_candidate(bytes, grid, off) {
                 return Some(sections);
@@ -180,11 +213,15 @@ mod tests {
         push_u32(&mut bytes, 0x9472);
         push_u32(&mut bytes, 0x2f44);
         let mut mask = [0u8; PRESENCE_BYTES];
-        mask[0] = 0b111;
+        mask[0] = 0x8f; // bits 0, 1, 2, 3 and 7
+        mask[1] = 0x01; // bit 8
         bytes.extend_from_slice(&mask);
-        bytes.extend_from_slice(&11u16.to_le_bytes());
-        bytes.extend_from_slice(&22u16.to_le_bytes());
-        bytes.extend_from_slice(&1.5f32.to_le_bytes());
+        bytes.extend_from_slice(&11u16.to_le_bytes()); // index 0, first
+        bytes.extend_from_slice(&22u16.to_le_bytes()); // index 0, second
+        bytes.extend_from_slice(&1.5f32.to_le_bytes()); // index 0, value
+        bytes.extend_from_slice(&33u16.to_le_bytes()); // index 1, first only
+        bytes.extend_from_slice(&44u16.to_le_bytes()); // index 2, second only
+        bytes.extend_from_slice(&2.5f32.to_le_bytes()); // index 2, value
         bytes.extend_from_slice(b"fixed-12byte");
         bytes.extend_from_slice(&1i16.to_le_bytes());
         bytes.extend_from_slice(&[1, 2, 3, 4, 5, 6]);
@@ -197,11 +234,42 @@ mod tests {
         assert_eq!(record.first_u16[0], 11);
         assert_eq!(record.second_u16[0], 22);
         assert_eq!(record.values_f32[0], 1.5);
+        assert_eq!(record.first_u16[1], 33);
+        assert_eq!(record.second_u16[1], 0);
+        assert_eq!(record.values_f32[1], 0.0);
+        assert_eq!(record.first_u16[2], 0);
+        assert_eq!(record.second_u16[2], 44);
+        assert_eq!(record.values_f32[2], 2.5);
         assert_eq!(&record.fixed, b"fixed-12byte");
         assert_eq!(record.entries, vec![[1, 2, 3, 4, 5, 6]]);
         assert_eq!(u32_at(&bytes, sections.end_offset), Some(0x2ee5));
+        for end in 0..bytes.len() {
+            let _ = read(&bytes[..end], &grid);
+        }
         bytes[sections.end_offset..sections.end_offset + 4].copy_from_slice(&0u32.to_le_bytes());
         assert!(read(&bytes, &grid).is_none());
+    }
+
+    #[test]
+    fn rejects_excessive_or_overflowing_dimensions() {
+        let oversized = HeightGrid {
+            offset: 0,
+            rows: 4001,
+            cols: 4001,
+            heights: Vec::new(),
+            nan_cells: 0,
+            zero_cells: 0,
+        };
+        assert!(layout(&oversized).is_none());
+        if usize::BITS >= 64 {
+            let overflowing = HeightGrid {
+                rows: 4_294_967_297,
+                cols: 4_294_967_297,
+                ..oversized
+            };
+            assert!(layout(&overflowing).is_none());
+            assert!(read(b"\x43\x2f\x00\x00\x71\x94\x00\x00", &overflowing).is_none());
+        }
     }
 
     #[test]
