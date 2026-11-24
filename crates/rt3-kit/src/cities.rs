@@ -75,12 +75,15 @@ fn parse_candidate(bytes: &[u8], section: usize) -> Option<CityCollection> {
     }
     let mut off = header.checked_add(76)?;
     let mask_bytes = capacity.checked_add(7)? / 8;
-    let mask = take(bytes, &mut off, mask_bytes)?.to_vec();
+    let mask = take(bytes, &mut off, mask_bytes)?;
     let mut records = Vec::new();
     records.try_reserve_exact(active).ok()?;
     for slot in 0..capacity {
         if mask[slot / 8] & (1 << (slot % 8)) != 0 {
             continue;
+        }
+        if records.len() >= active {
+            return None;
         }
         let prefix = take(bytes, &mut off, 6)?.try_into().ok()?;
         let len = u16::from_le_bytes(take(bytes, &mut off, 2)?.try_into().ok()?) as usize;
@@ -165,6 +168,17 @@ mod tests {
             .label_bytes()
             .unwrap()
             .starts_with(b"Cork"));
+        for end in 0..bytes.len() {
+            let _ = read(&bytes[..end]);
+        }
+        let mut bad_active = bytes.clone();
+        bad_active[0x301c..0x3020].copy_from_slice(&3u32.to_le_bytes());
+        assert!(read(&bad_active).is_none());
+        let mut bad_length = bytes.clone();
+        let first_length = 0x3000 + 8 + 76 + 1 + 6;
+        bad_length[first_length..first_length + 2]
+            .copy_from_slice(&((CITY_BLOB_BYTES as u16 + 1).to_le_bytes()));
+        assert!(read(&bad_length).is_none());
         bytes[collection.end_offset..collection.end_offset + 4]
             .copy_from_slice(&0u32.to_le_bytes());
         assert!(read(&bytes).is_none());

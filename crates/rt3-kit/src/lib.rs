@@ -11,6 +11,8 @@
 //! | `language` | `Data/Language/RT3.lng` | milestone 2 |
 //! | `map` | `maps/*.gmp`, `Data/GrayscaleMaps/*.TGA` | milestone 3 |
 //! | `cities` | city collections and raw labels in `maps/*.gmp` | milestone 3b |
+//! | `buildings` | placed building/industry collections | milestone 3b |
+//! | `events` | scenario event records, names and text | milestone 3b |
 //! | `terrain` | terrain heightfields inside `maps/*.gmp` | milestone 3b |
 //! | `tiles` | per-cell arrays and per-tile terrain records | milestone 3b |
 //! | `render` | north-up RGB PNG views of decoded heightfields | milestone 3b |
@@ -24,13 +26,16 @@
 //! Status: milestone 1 — `pk4` (PK4 asset archives); milestone 2 — `typed`
 //! (typed game-data records and text/config); milestone 3 — `map`
 //! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield),
-//! `tiles` (per-tile records), `cities` (city collections) and `render`
-//! (north-up PNG). The remaining families land with their milestones.
+//! `tiles` (per-tile records), `cities`, `buildings`, `events` and
+//! `render` (north-up PNG). The remaining families land with their milestones.
 
+pub mod buildings;
 pub mod cities;
+pub mod events;
 pub mod map;
 pub mod pk4;
 pub mod render;
+mod sparse;
 pub mod terrain;
 pub mod tiles;
 pub mod typed;

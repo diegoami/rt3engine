@@ -36,8 +36,11 @@ u32 0x520a
 ```
 
 `cities::read` checks the full header, level triples, sparse slot count,
-every blob length and the exact terminator. Capacity is bounded and all
-allocations are fallible. Every shipped collection matches: **4,130
+every blob length and the exact terminator. Capacity is bounded; record
+and blob storage use fallible reservations, and an active-count guard
+prevents growth beyond the declared records. Direct regressions cover
+strict truncations, mismatched active counts, invalid blob lengths and
+the terminator. Every shipped collection matches: **4,130
 slots, 3,726 active records**. Ireland has 90 slots and 76 records;
 British Isles has 70 and 68. Every active blob is exactly 905 bytes.
 
