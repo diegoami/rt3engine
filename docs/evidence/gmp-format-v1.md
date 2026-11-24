@@ -55,8 +55,9 @@ map-specific tail (terrain + objects; grammar open — see below)
 - The map-specific tail: terrain encoding — step 1 (the coarse
   heightfield) is proven, see [gmp-terrain-v1.md](gmp-terrain-v1.md);
   city collection framing is parsed in
-  [gmp-cities-v1.md](gmp-cities-v1.md), with blob semantics open.
-  Objects, industries/resources and events remain. The remaining
+  [gmp-cities-v1.md](gmp-cities-v1.md); building/event structural
+  collections are in [gmp-collections-v1.md](gmp-collections-v1.md).
+  Their gameplay field semantics and relationships remain. The remaining
   section handlers' own reads must be mapped.
 - Legacy 9609/9610 non-prelude/non-terrain sections; their coarse grids
   share the explicit frame described in gmp-terrain-v1.md.

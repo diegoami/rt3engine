@@ -23,13 +23,15 @@ Checks self-skip without `RT3_HOME` (CI).
 | `pk4-archives-v1.json` | PK4 aggregate: 18 archives, format version 1003, 8,375 entries, ~387 MB raw payload, per-archive totals (metadata only) | `rt3ctl pk4 list --json` |
 | `typed-tables-v1.json` | Typed-data aggregate: 41 cargo, 190 building types, 67 behaviors (99 subrecords, 35 scripts), 66 locomotives, 145 car types, 268 tree rows, 3,868 language strings, engine.cfg 800×600 | `rt3ctl typed list --json` |
 | `maps-inventory-v1.json` | Map inventory: 43 shipped maps (40 version-9701 current, 3 legacy 9609/9610) with text lengths and tail sizes (metadata only) | `rt3ctl map list --json` |
-| `terrain-scan-v1.json` | Terrain, per-tile and city framing: all 43 shipped maps verified, with exact offsets, dimensions, height statistics, tile-record counts, dynamic entries and city capacities/counts | `rt3ctl map terrain --all --json` |
+| `terrain-scan-v1.json` | Terrain and sparse-map collections: all 43 shipped maps verified, with exact offsets, dimensions, height statistics and per-map tile/city/building/event capacities and counts | `rt3ctl map terrain --all --json` |
 
 Format findings with method and provenance live beside them:
 [pk4-format-v1.md](pk4-format-v1.md) (PK4 layout; claim level: parse) and
 [typed-formats-v1.md](typed-formats-v1.md) (typed records and text/config)
 and [gmp-format-v1.md](gmp-format-v1.md) (map prelude; claim level: parse).
-City collection findings live in [gmp-cities-v1.md](gmp-cities-v1.md).
+City collection findings live in [gmp-cities-v1.md](gmp-cities-v1.md);
+building/event collections are in
+[gmp-collections-v1.md](gmp-collections-v1.md).
 Milestone 3 adds map findings; later milestones add save
 findings, each with its producer command and method note (Ghidra address,
 oracle session, or both).
