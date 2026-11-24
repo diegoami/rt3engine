@@ -33,3 +33,27 @@
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `8bf06bd` (delegated merge per decisions 0002
+and 0003, 2026-11-24). Done-when items and evidence:
+
+- `rt3_kit::cities` parses the proven `gpdCityDB` collection with bounded
+  capacity, sparse slots, exact 905-byte blobs and `0x520a` terminator.
+- All 43 maps reconcile at 4,130 slots and 3,726 active records. The
+  artifact adds per-map city summaries while every previous field is
+  unchanged.
+- Complete blobs and raw 48-byte labels are retained without normalizing
+  the three control-prefixed records. Dublin, Manchester, totals and
+  anomalies are covered by install-backed tests.
+- Synthetic sparse-slot/label/terminator tests pass; the terminator
+  assertion failed when its check was bypassed. Allocation wording and
+  direct malformed-input coverage are carried into the shared collection
+  follow-up noted by the non-blocking review findings.
+- Formatting, clippy, 47 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `b35cdce6687d070333988dc7f6125727d9131ba5` and is posted on PR #27.
+
+— Implementer (zai-coding-plan/glm-5.3)
