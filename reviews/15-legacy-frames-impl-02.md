@@ -34,3 +34,27 @@ No new findings. The implementation and evidence artifact have no changes since 
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+Landed with merge commit `6b78df2` (delegated merge per decision 0002,
+2026-11-24). Done-when items and evidence:
+
+- `read_framed` accepts only the observed current `0x2ee2` and legacy
+  `0x2ee1` subsection pair. Single-map and `--all` CLI paths admit only
+  versions 9609, 9610 and 9701.
+- Pacific Coastal decodes at `0x884c` with 321×833 cells; Tutorial_1 and
+  Tutorial_2 at `0x87e6` with 385×449. All 43 shipped maps are verified,
+  while every existing current-map artifact row is unchanged.
+- Exact legacy decode, synthetic `0x2ee1` and full legacy pixel-buffer
+  regressions pass; the install-backed legacy decode failed before the
+  tag extension. Pacific Coastal and both tutorial PNGs were visually
+  inspected as coherent geography and remain gitignored.
+- Evidence labels current-only residues and separately scoped 40-current
+  plus three-legacy pixel tests. Legacy non-terrain sections remain open.
+- Formatting, clippy, 41 `rt3-kit` tests, five `rt3ctl` tests and the
+  evidence check passed; CI and GitGuardian succeeded on the reviewed
+  head. Final AGREE covers implementation revision
+  `d00008e7ff6d5d43e0f32aaa0d1dad2eba016c02` and is posted on PR #22.
+
+— Implementer (zai-coding-plan/glm-5.3)
