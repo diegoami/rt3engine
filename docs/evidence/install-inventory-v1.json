@@ -2,7 +2,7 @@
   "root": "Railroad Tycoon 3",
   "total": {
     "files": 1177,
-    "bytes": 2031930087
+    "bytes": 2031926720
   },
   "top_level": {
     "CPUInfo.exe": {
@@ -11,7 +11,7 @@
     },
     "Data": {
       "files": 790,
-      "bytes": 927579821
+      "bytes": 927576454
     },
     "GameuxInstallHelper.dll": {
       "files": 1,
@@ -277,7 +277,7 @@
     },
     "txt": {
       "files": 6,
-      "bytes": 16988
+      "bytes": 13621
     },
     "zip": {
       "files": 1,
