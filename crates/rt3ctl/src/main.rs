@@ -17,6 +17,7 @@
 mod inventory;
 mod map_cmd;
 mod pk4_cmd;
+mod save_cmd;
 mod typed_cmd;
 
 use std::path::PathBuf;
@@ -30,6 +31,7 @@ Usage:
   rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl map list [--path <install-root>] [--json]
   rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
+  rt3ctl save inspect --path <save-file> [--json]
   rt3ctl --help
 
 Environment:
@@ -42,6 +44,7 @@ enum Command {
     TypedList(typed_cmd::TypedList),
     MapList(map_cmd::MapList),
     MapTerrain(map_cmd::MapTerrain),
+    SaveInspect(save_cmd::SaveInspect),
     Help,
 }
 
@@ -143,6 +146,32 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             }
             Some(other) => Err(format!("unknown map subcommand: {other}")),
         },
+        "save" => match it.next().map(String::as_str) {
+            Some("inspect") => {
+                let mut path = None;
+                let mut json = false;
+                while let Some(arg) = it.next() {
+                    match arg.as_str() {
+                        "--path" => {
+                            let value = it
+                                .next()
+                                .filter(|v| !v.starts_with("--"))
+                                .ok_or_else(|| "save inspect: --path needs a value".to_string())?;
+                            path = Some(PathBuf::from(value));
+                        }
+                        "--json" => json = true,
+                        other => return Err(format!("save inspect: unknown option {other}")),
+                    }
+                }
+                let path =
+                    path.ok_or_else(|| "save inspect needs --path <save-file>".to_string())?;
+                Ok(Command::SaveInspect(save_cmd::SaveInspect { path, json }))
+            }
+            Some("--help") | Some("help") | None => {
+                Err("save needs a subcommand: inspect".to_string())
+            }
+            Some(other) => Err(format!("unknown save subcommand: {other}")),
+        },
         "typed" => match it.next().map(String::as_str) {
             Some("list") => Ok(Command::TypedList(typed_cmd::parse(it))),
             Some("--help") | Some("help") | None => {
@@ -197,6 +226,7 @@ fn main() -> ExitCode {
         Command::TypedList(list) => typed_cmd::run(list),
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
+        Command::SaveInspect(s) => save_cmd::run(s),
     }
 }
 

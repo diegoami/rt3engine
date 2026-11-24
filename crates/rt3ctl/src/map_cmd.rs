@@ -62,7 +62,7 @@ struct Row {
     file_len: u64,
 }
 
-fn json_escape(value: &str) -> String {
+pub(crate) fn json_escape(value: &str) -> String {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('"');
     for c in value.chars() {

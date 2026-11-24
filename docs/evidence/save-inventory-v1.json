@@ -1,0 +1,11 @@
+{
+  "file": "Central west Pacific 1.gmc",
+  "version": 9701,
+  "file_bytes": 8490851,
+  "sha256": "3c11cbbdde844273c499086a8a4c23df9e1cfe9837910696fa13bf32d121d99b",
+  "terrain": {"grid_offset": 35804, "rows": 257, "cols": 385, "min_height_m": -12.0, "max_height_m": 1821.4},
+  "tiles": {"section_offset": 2601345, "records": 6144, "dynamic_entries": 0, "end_offset": 3469555},
+  "cities": {"section_offset": 4084035, "capacity": 70, "records": 59, "end_offset": 4137995},
+  "buildings": {"section_offset": 3579183, "capacity": 430, "records": 410, "end_offset": 3989731},
+  "events": {"section_offset": 4244640, "capacity": 30, "records": 17, "end_offset": 4282475}
+}
