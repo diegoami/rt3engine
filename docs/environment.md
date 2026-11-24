@@ -8,10 +8,12 @@ installation reachable through the Windows mount.
 - `RT3_HOME` names the Railroad Tycoon 3 root. Default on this machine:
   the GOG install at `/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3`
   (referenced only through `RT3_HOME`; always treated read-only).
-- `RT3_SAVE` optionally names one original `.gmc` save fixture for the
-  save-inventory producer and tests. It is read-only and normally lives in
-  the gitignored working area; save bytes never enter Git. CI self-skips it
-  when unset, just as install-backed checks self-skip without `RT3_HOME`.
+- `RT3_SAVE` optionally names one owner-supplied original `.gmc` save fixture;
+  `RT3_CONTROL_SAVE` optionally names the independently generated `.gms`
+  control fixture. Both are read-only inputs to their inventory producers and
+  tests, normally in the gitignored working area. Save bytes never enter Git.
+  CI self-skips them when unset, just as install-backed checks self-skip
+  without `RT3_HOME`.
 - Verified content (2026-11-21): `RT3.exe` (PE32, 2.3 MB), `Data/` with
   `2D/3D/Sound` PK4 archives, typed directories (`BuildingTypes`,
   `CargoTypes`, `EngineTypes`, `TreeTypes`), `Configuration/*.cfg` (binary),

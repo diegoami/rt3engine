@@ -1,4 +1,4 @@
-//! Original `.gmc` save-game structural inventory (milestone 4).
+//! Original `.gmc`/`.gms` save-game structural inventory (milestone 4).
 
 use crate::buildings::BuildingCollection;
 use crate::cities::CityCollection;
@@ -162,6 +162,26 @@ mod tests {
         assert_eq!(
             save.sha256_hex(),
             "3c11cbbdde844273c499086a8a4c23df9e1cfe9837910696fa13bf32d121d99b"
+        );
+    }
+
+    #[test]
+    fn reads_independent_control_save() {
+        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+            eprintln!("RT3_CONTROL_SAVE unset; skipping controlled-save check");
+            return;
+        };
+        let bytes = fs::read(path).unwrap();
+        let save = from_bytes(&bytes).expect("independent controlled save");
+        assert_eq!(save.file_bytes, 10_285_120);
+        assert_eq!((save.terrain.rows, save.terrain.cols), (513, 321));
+        assert_eq!(save.tiles.records.len(), 10_240);
+        assert_eq!(save.cities.records.len(), 68);
+        assert_eq!(save.buildings.records.len(), 520);
+        assert_eq!(save.events.records.len(), 39);
+        assert_eq!(
+            save.sha256_hex(),
+            "f892bc28ea1fb3bb1ff60f3ed443e82de7818d3fd7a7c26a93e974cfb69ac6bc"
         );
     }
 }
