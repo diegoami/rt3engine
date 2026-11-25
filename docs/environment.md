@@ -20,7 +20,7 @@ installation reachable through the Windows mount.
   `CargoTypes`, `EngineTypes`, `TreeTypes`), `Configuration/*.cfg` (binary),
   `Language/RT3.lng` (INI-like text), `GrayscaleMaps/*.TGA`, `maps/*.gmp`,
   mp3 music/voice, no user saves yet. Aggregate inventory:
-  [evidence v1](evidence/install-inventory-v1.json) — 1,177 files, ~2.02 GB.
+  [evidence v1](evidence/install-inventory-v1.json) — 1,177 files, ~2.03 GB.
 
 ## Toolchain
 
