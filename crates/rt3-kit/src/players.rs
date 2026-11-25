@@ -18,6 +18,14 @@ pub fn name_bytes(record: &PlayerRecord) -> Option<&[u8]> {
         .get(PLAYER_NAME_OFFSET..PLAYER_NAME_OFFSET + PLAYER_NAME_BYTES)
 }
 
+pub fn name(record: &PlayerRecord) -> Option<&str> {
+    let used = name_bytes(record)?.split(|byte| *byte == 0).next()?;
+    if used.is_empty() || !used.iter().all(|byte| (32..127).contains(byte)) {
+        return None;
+    }
+    std::str::from_utf8(used).ok()
+}
+
 pub fn read(bytes: &[u8]) -> Option<PlayerCollection> {
     crate::fixed::read(
         bytes,
@@ -63,6 +71,7 @@ mod tests {
             total += collection.records.len();
             for record in collection.records {
                 assert_eq!(record.data.len(), PLAYER_BLOB_BYTES);
+                assert!(name(&record).is_some());
                 let name = name_bytes(&record).unwrap();
                 let used = name.split(|byte| *byte == 0).next().unwrap();
                 assert!(!used.is_empty());

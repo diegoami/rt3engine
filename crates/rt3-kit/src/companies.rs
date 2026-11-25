@@ -20,6 +20,14 @@ pub fn name_bytes(record: &CompanyRecord) -> Option<&[u8]> {
         .get(COMPANY_NAME_OFFSET..COMPANY_NAME_OFFSET + COMPANY_NAME_BYTES)
 }
 
+pub fn name(record: &CompanyRecord) -> Option<&str> {
+    let used = name_bytes(record)?.split(|byte| *byte == 0).next()?;
+    if used.is_empty() || !used.iter().all(|byte| (32..127).contains(byte)) {
+        return None;
+    }
+    std::str::from_utf8(used).ok()
+}
+
 pub fn founded_year(record: &CompanyRecord) -> Option<u32> {
     let end = COMPANY_FOUNDED_YEAR_OFFSET.checked_add(4)?;
     Some(u32::from_le_bytes(
@@ -78,6 +86,7 @@ mod tests {
             total += collection.records.len();
             for record in collection.records {
                 assert_eq!(record.data.len(), COMPANY_BLOB_BYTES);
+                assert!(name(&record).is_some());
                 let name = name_bytes(&record).unwrap();
                 let used = name.split(|byte| *byte == 0).next().unwrap();
                 assert!(!used.is_empty());

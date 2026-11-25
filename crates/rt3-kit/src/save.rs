@@ -212,9 +212,10 @@ mod tests {
         assert_eq!(save.buildings.records.len(), 410);
         assert_eq!(save.companies.records.len(), 0);
         assert_eq!(save.players.records.len(), 4);
-        assert!(crate::players::name_bytes(&save.players.records[3])
-            .unwrap()
-            .starts_with(b"Unassigned"));
+        assert_eq!(
+            crate::players::name(&save.players.records[3]),
+            Some("Unassigned")
+        );
         assert_eq!(save.events.records.len(), 17);
         assert_eq!(
             save.sha256_hex(),
@@ -244,13 +245,15 @@ mod tests {
             .map(crate::companies::founded_year)
             .collect::<Option<Vec<_>>>();
         assert_eq!(founded_years, Some(vec![1830, 1830, 1829]));
-        assert!(crate::companies::name_bytes(&save.companies.records[2])
-            .unwrap()
-            .starts_with(b"Great Republic"));
+        assert_eq!(
+            crate::companies::name(&save.companies.records[2]),
+            Some("Great Republic")
+        );
         assert_eq!(save.players.records.len(), 3);
-        assert!(crate::players::name_bytes(&save.players.records[0])
-            .unwrap()
-            .starts_with(b"George Hudson"));
+        assert_eq!(
+            crate::players::name(&save.players.records[0]),
+            Some("George Hudson")
+        );
         assert_eq!(save.events.records.len(), 39);
         assert_eq!(
             save.sha256_hex(),
