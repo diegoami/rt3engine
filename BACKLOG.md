@@ -32,9 +32,8 @@ compensates for absent engine mechanics.
    control saves, native read-back, source/company/player fields, a
    section/actor differential, and the native Windows companion decision
    (0004). Issues #30 and #43 are closed. Milestone 5 implementation is
-   complete through PR #49 (claims C1–C5); next is the M5 milestone review, and
-   milestone 6 has not started. Issue #50 records a pre-existing evidence-reproduce
-   path fix.
+   complete through PR #49 (claims C1–C5); the pre-existing fixture-path defect
+   #50 is fixed. Next is the M5 milestone review; milestone 6 has not started.
 3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
    remains open (broader web survey, patch-level verification).
 
