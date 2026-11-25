@@ -68,8 +68,12 @@ pub struct World {
 /// reported as a world; only version-9701 maps are accepted.
 pub fn load_map(map: &Path) -> Result<World, WorldError> {
     let bytes = fs::read(map).map_err(|e| WorldError::new(map, e))?;
-    GmpMap::from_bytes(map, &bytes)
-        .map_err(|e| WorldError::new(map, format!("not a supported version-9701 map: {e}")))?;
+    GmpMap::from_bytes(map, &bytes).map_err(|e| {
+        WorldError::new(
+            map,
+            format!("not a supported version-9701 map: {}", e.detail()),
+        )
+    })?;
     let terrain = terrain::read_framed(&bytes)
         .ok_or_else(|| WorldError::new(map, "no framed terrain grid"))?;
     let city = cities::read(&bytes).ok_or_else(|| WorldError::new(map, "no city collection"))?;
@@ -106,7 +110,8 @@ pub fn load_cargo(home: &Path) -> Result<Vec<CargoType>, WorldError> {
             continue;
         }
         let bytes = fs::read(&path).map_err(|e| WorldError::new(&path, e))?;
-        cargo.push(CargoType::parse(&path, &bytes).map_err(|e| WorldError::new(&path, e))?);
+        cargo
+            .push(CargoType::parse(&path, &bytes).map_err(|e| WorldError::new(&path, e.detail()))?);
     }
     if cargo.is_empty() {
         return Err(WorldError::new(&dir, "no cargo types found"));

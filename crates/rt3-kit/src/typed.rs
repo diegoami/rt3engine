@@ -32,6 +32,11 @@ pub struct TypedError {
 }
 
 impl TypedError {
+    /// The failure detail, without the machine-specific path.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
     fn new(path: &Path, detail: impl fmt::Display) -> TypedError {
         TypedError {
             path: path.to_path_buf(),

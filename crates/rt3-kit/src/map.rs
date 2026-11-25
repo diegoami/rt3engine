@@ -35,6 +35,13 @@ pub struct MapError {
     detail: String,
 }
 
+impl MapError {
+    /// The failure detail, without the machine-specific path.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+}
+
 impl std::fmt::Display for MapError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.path.display(), self.detail)
