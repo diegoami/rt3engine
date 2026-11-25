@@ -19,6 +19,7 @@ mod map_cmd;
 mod pk4_cmd;
 mod save_cmd;
 mod save_diff;
+mod sim_cmd;
 mod typed_cmd;
 
 use std::path::PathBuf;
@@ -32,6 +33,7 @@ Usage:
   rt3ctl typed list [--path <install-root>] [--json]
   rt3ctl map list [--path <install-root>] [--json]
   rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
+  rt3ctl sim inspect <map> [--path <install-root>] [--json]
   rt3ctl save inspect --path <save-file> [--json]
   rt3ctl save diff --path-a <first-save> --path-b <second-save> [--json]
   rt3ctl --help
@@ -46,6 +48,7 @@ enum Command {
     TypedList(typed_cmd::TypedList),
     MapList(map_cmd::MapList),
     MapTerrain(map_cmd::MapTerrain),
+    SimInspect(sim_cmd::SimInspect),
     SaveInspect(save_cmd::SaveInspect),
     SaveDiff(save_diff::SaveDiff),
     Help,
@@ -149,6 +152,13 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             }
             Some(other) => Err(format!("unknown map subcommand: {other}")),
         },
+        "sim" => match it.next().map(String::as_str) {
+            Some("inspect") => Ok(Command::SimInspect(sim_cmd::parse(it)?)),
+            Some("--help") | Some("help") | None => {
+                Err("sim needs a subcommand: inspect <map>".to_string())
+            }
+            Some(other) => Err(format!("unknown sim subcommand: {other}")),
+        },
         "save" => {
             match it.next().map(String::as_str) {
                 Some("inspect") => {
@@ -216,7 +226,7 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
     }
 }
 
-fn install_root(explicit: Option<PathBuf>) -> Option<PathBuf> {
+pub(crate) fn install_root(explicit: Option<PathBuf>) -> Option<PathBuf> {
     explicit.or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from))
 }
 
@@ -258,6 +268,7 @@ fn main() -> ExitCode {
         Command::TypedList(list) => typed_cmd::run(list),
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
+        Command::SimInspect(i) => sim_cmd::run(i),
         Command::SaveInspect(s) => save_cmd::run(s),
         Command::SaveDiff(s) => save_diff::run(s),
     }

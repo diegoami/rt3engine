@@ -13,5 +13,8 @@
 //! (objectives), `player` (observation/order interfaces), `campaign_runner`
 //! (headless autoplay), `checkpoint` (versioned native persistence).
 //!
-//! Status: placeholder at milestone 0 (bootstrap); the kernel lands with
-//! milestone 5.
+//! Status: milestone 5 — `world` (map-grounded structural world: terrain,
+//! city and building records, cargo catalogue). The economy tick lands with
+//! the rest of milestone 5.
+
+pub mod world;
