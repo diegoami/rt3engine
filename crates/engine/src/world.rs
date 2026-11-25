@@ -58,18 +58,13 @@ pub struct World {
     pub cargo: Vec<CargoType>,
 }
 
-/// Loads one map's structural world. Only version-9701 maps are accepted;
-/// older map versions are a later milestone's problem, not this one's.
+/// Loads one map's structural world. The map prelude is validated by the
+/// map parser before any section is read, so a malformed header cannot be
+/// reported as a world; only version-9701 maps are accepted.
 pub fn load_map(map: &Path) -> Result<World, WorldError> {
     let bytes = fs::read(map).map_err(|e| WorldError::new(map, e))?;
-    let version = GmpMap::peek_version(&bytes)
-        .ok_or_else(|| WorldError::new(map, "not a supported map file"))?;
-    if version != 9701 {
-        return Err(WorldError::new(
-            map,
-            format!("map version {version} is not supported; milestone 5 loads version 9701"),
-        ));
-    }
+    GmpMap::from_bytes(map, &bytes)
+        .map_err(|e| WorldError::new(map, format!("not a supported version-9701 map: {e}")))?;
     let terrain = terrain::read_framed(&bytes)
         .ok_or_else(|| WorldError::new(map, "no framed terrain grid"))?;
     let city = cities::read(&bytes).ok_or_else(|| WorldError::new(map, "no city collection"))?;

@@ -163,3 +163,43 @@ fn rejects_legacy_map_versions() {
         "unexpected error: {error}"
     );
 }
+
+#[test]
+fn rejects_malformed_prelude_despite_intact_sections() {
+    let Some(home) = home() else {
+        eprintln!("RT3_HOME unset; skipping malformed-prelude check");
+        return;
+    };
+    let mut bytes = fs::read(home.join("maps").join("British Isles.gmp")).unwrap();
+    // Keep version 9701 and every later section, but remove the prelude's NUL
+    // terminator: the map parser must reject this before a World is built.
+    for byte in &mut bytes[4..4 + 30_000] {
+        *byte = 0x41;
+    }
+    let path = std::env::temp_dir().join(format!(
+        "rt3engine-malformed-prelude-{}.gmp",
+        std::process::id()
+    ));
+    fs::write(&path, &bytes).unwrap();
+    let error = world::load_map(&path).expect_err("malformed prelude must be rejected");
+    fs::remove_file(&path).ok();
+    assert!(
+        error
+            .to_string()
+            .contains("not a supported version-9701 map"),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
+fn rejects_non_map_files_with_a_named_error() {
+    let path = std::env::temp_dir().join(format!("rt3engine-not-a-map-{}.bin", std::process::id()));
+    fs::write(&path, b"not a map at all").unwrap();
+    let error = world::load_map(&path).expect_err("non-map file must be rejected");
+    fs::remove_file(&path).ok();
+    let message = error.to_string();
+    assert!(
+        message.contains("not a supported version-9701 map"),
+        "unexpected error: {message}"
+    );
+}
