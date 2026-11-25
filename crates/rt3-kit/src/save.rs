@@ -237,6 +237,13 @@ mod tests {
         assert_eq!(save.cities.records.len(), 68);
         assert_eq!(save.buildings.records.len(), 520);
         assert_eq!(save.companies.records.len(), 3);
+        let founded_years = save
+            .companies
+            .records
+            .iter()
+            .map(crate::companies::founded_year)
+            .collect::<Option<Vec<_>>>();
+        assert_eq!(founded_years, Some(vec![1830, 1830, 1829]));
         assert!(crate::companies::name_bytes(&save.companies.records[2])
             .unwrap()
             .starts_with(b"Great Republic"));
