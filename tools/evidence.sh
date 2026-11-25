@@ -33,11 +33,13 @@ documented_total_line_matches() {
     line=$1
     want_files=$2
     want_gb=$3
-    line_files=$(printf '%s\n' "$line" | tr -d ',' | grep -Eo '[0-9]+ files' | awk '{ print $1; exit }')
-    line_gb=$(printf '%s\n' "$line" | grep -Eo '[0-9]+\.[0-9]+ GB' | awk '{ print $1; exit }')
-    [ -n "$line_files" ] && [ -n "$line_gb" ] &&
-        [ "$line_files" = "$want_files" ] &&
-        awk -v a="$line_gb" -v b="$want_gb" 'BEGIN { exit (a == b ? 0 : 1) }'
+    files_matches=$(printf '%s\n' "$line" | tr -d ',' | grep -Eo '[0-9]+ files' || true)
+    gb_matches=$(printf '%s\n' "$line" | grep -Eo '[0-9]+\.[0-9]+ GB' || true)
+    [ -n "$files_matches" ] && [ -n "$gb_matches" ] || return 1
+    [ "$(printf '%s\n' "$files_matches" | wc -l | tr -d ' ')" = 1 ] || return 1
+    [ "$(printf '%s\n' "$gb_matches" | wc -l | tr -d ' ')" = 1 ] || return 1
+    [ "${files_matches%% *}" = "$want_files" ] || return 1
+    awk -v a="${gb_matches%% *}" -v b="$want_gb" 'BEGIN { exit (a == b ? 0 : 1) }'
 }
 
 # check_doc_totals_file DOC FILES GB — every row in DOC that names the install
@@ -57,7 +59,7 @@ check_doc_totals_file() {
             row_drift=1
         fi
     done <<EOF
-$(grep -F 'install-inventory-v1.json' "$doc" || true)
+$(grep -E '(^|[^A-Za-z0-9._~-])install-inventory-v1\.json([^A-Za-z0-9._~-]|$)' "$doc" || true)
 EOF
     if [ "$rows" -eq 0 ]; then
         echo "documented totals drift: $doc has no install-inventory-v1.json row" >&2
@@ -84,6 +86,10 @@ selftest_documented_totals() {
         echo "documented totals self-test: accepted a stale file count" >&2
         ok=1
     fi
+    if documented_total_line_matches 'Aggregate installation inventory: 1,177 files, ~2.03 GB, previously 1,176 files;' 1177 2.03; then
+        echo "documented totals self-test: accepted two file counts on one row" >&2
+        ok=1
+    fi
     tmp=$(mktemp "${TMPDIR:-/tmp}/evidence-totals.XXXXXX") || return 2
     printf '%s\n%s\n' \
         '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' \
@@ -102,6 +108,16 @@ selftest_documented_totals() {
         echo "documented totals self-test: accepted a near-miss artifact name" >&2
         ok=1
     fi
+    for lookalike in \
+        'install-inventory-v1.json.bak' \
+        'install-inventory-v1.json~' \
+        'xinstall-inventory-v1.json'; do
+        printf '| `%s` | 1,177 files, ~2.03 GB |\n' "$lookalike" > "$tmp"
+        if check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null; then
+            echo "documented totals self-test: accepted a lookalike artifact name ($lookalike)" >&2
+            ok=1
+        fi
+    done
     printf '%s\n%s\n' \
         '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' \
         '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' > "$tmp"
