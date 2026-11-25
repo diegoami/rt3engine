@@ -29,17 +29,22 @@ gate — including owner acceptance where named — plus the release process in
 ## Milestone 5 — headless economy kernel (scope fixed 2026-11-25)
 
 **Promise:** a headless economy kernel over loaded original maps — a fixed-tick,
-seeded simulation of cities, placed industries and cargo supply, demand and
-prices, with monthly dumps, deterministic replay, and divergence from
-measurable original state documented.
+seeded simulation of cities, placed buildings and cargo supply, demand and
+prices under a declared industry model, with monthly dumps, deterministic
+replay, and divergence from measurable original state documented.
 
 Claims, each naming the check that proves it:
 
 - **C1 — Map-grounded world.** The kernel loads two shipped maps with their
-  cities, placed industry buildings, cargo catalogue and terrain, reporting
-  counts identical to the structural parsers. Check: `cargo test -p engine`
-  with `RT3_HOME` on `British Isles.gmp` and `California Island.gmp`, asserting
-  the loaded city and building counts against `rt3-kit`'s collections.
+  city records, placed building records, the typed cargo catalogue and the
+  coarse terrain heightfield, reporting counts identical to the structural
+  parsers. Check: `cargo test -p engine` with `RT3_HOME` on `British Isles.gmp`
+  and `California Island.gmp`, asserting the loaded city and building record
+  counts against `rt3-kit`'s collections, the 41-type cargo catalogue against
+  `typed-tables-v1.json` (including a named type such as `Alcohol`), and the
+  terrain dimensions and height range against `terrain-scan-v1.json`. Building
+  and city *semantics* (industry types, production, demand links) are not
+  claimed here; only parser-proven structural records.
 - **C2 — Fixed-tick supply, demand and prices.** One simulated month is a
   declared tick count; each tick applies documented production, consumption and
   price rules, with the stock accounting identity and documented bounds
@@ -48,25 +53,29 @@ Claims, each naming the check that proves it:
   `docs/evidence/economy-v1.md`.
 - **C3 — Seeded determinism.** The same map, seed, configuration and tick count
   produce byte-identical monthly dumps, and a different seed changes them.
-  Check: the engine golden-hash replay test and `rt3ctl sim run` twice on a
-  shipped map compared by SHA-256.
+  Check: the engine golden-hash replay test asserts both the identical-dump and
+  changed-seed cases; `rt3ctl sim run` twice on a shipped map with the same
+  inputs is compared by SHA-256, and a changed seed changes the digest.
 - **C4 — Multi-year runs on two maps.** `rt3ctl sim run` completes at least one
   in-game decade on two shipped maps, emitting one JSON line per month and an
-  explicit stop reason. Check: install-backed integration runs on both maps with
+  explicit stop reason. Check: install-backed integration runs of a decade on
+  both maps, each run repeated and the two dumps compared byte-for-byte, with
   the dump schema validated and the stop reason asserted.
 - **C5 — Measurable divergence documented.** The kernel's British Isles start
   state is compared with the controlled original save at January 1829 (city
-  collection, placed building/industry collection, cargo catalogue); every
-  difference, and every economy rule without original-constant provenance, is
-  listed in `docs/evidence/economy-v1.md`. Check: `rt3ctl sim compare`
-  reproduces the comparison, and the evidence doc enumerates each divergence
-  with its cause.
+  collection, placed building collection, cargo catalogue); every difference,
+  and every economy rule without original-constant provenance, is listed in
+  `docs/evidence/economy-v1.md`. Check: `rt3ctl sim compare` reproduces the
+  comparison, and the evidence doc enumerates each divergence with its cause.
 
-**Not in this release:** track and trains, stations and schedules (milestone
-6); player or AI company operations, company finance beyond a starting
-balance, stock market, bonds and maintenance; campaign objectives; observer,
-client and MCP surfaces; original save writing; bit-exact original fidelity;
-original economy constants that reverse engineering has not recovered.
+**Not in this release:** track, trains, consists and schedules (milestone 6);
+player or AI company operations, company finance beyond a starting balance and
+maintenance; observer (milestone 7); original-save entry (milestone 8); client
+(milestone 9); buildable stations and buildings, industry upgrades, stock
+market, bonds, competitor depth and campaign objectives (milestone 10); MCP
+surfaces (milestones 11–12); original save writing (milestone 13); bit-exact
+original fidelity; original economy constants that reverse engineering has not
+recovered.
 
 **Gate:** C1–C5 met on the candidate, including the deterministic multi-year
 run on two maps and the documented divergence.
