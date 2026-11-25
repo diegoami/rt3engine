@@ -163,7 +163,7 @@ mod tests {
         assert!(collection.records[1].data.iter().all(|&byte| byte == 1));
         assert_eq!(collection.end_offset + 8, bytes.len());
         for end in 0..bytes.len() {
-            let _ = read(&bytes[..end], spec);
+            assert!(read(&bytes[..end], spec).is_none(), "accepted prefix {end}");
         }
     }
 }
