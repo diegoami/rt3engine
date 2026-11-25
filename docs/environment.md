@@ -32,9 +32,10 @@ installation reachable through the Windows mount.
   the community-documented 1.05 map mark (1.06 maps use 9901, `0x26AD`; the
   three legacy maps carry 9609/9610). The PE version resource is not diagnostic
   (FileVersion `1`, ProductVersion `0, 2, 0, 1`), and no independent build
-  identifier has been matched to the hashes above. Version-9901 originals are
-  rejected by the current parser; a 1.06 installation is not the reference
-  machine.
+  identifier has been matched to the hashes above, so a 1.06 executable cannot
+  be excluded from this evidence alone. Version-9901 originals are rejected by
+  the current parser; that is a statement about parser scope, not about which
+  patch built this executable.
 
 ## Toolchain
 
