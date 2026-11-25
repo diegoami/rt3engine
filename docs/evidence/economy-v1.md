@@ -26,11 +26,11 @@ by a declared index convention and must not be read as game behaviour.
 | Rule | Formula or value | Status |
 |---|---|---|
 | Tick length | 1 simulated month = 30 ticks | declared |
-| Initial stock | 1,000 units per cargo | declared |
-| Stock cap | 10 × initial stock | declared |
+| Initial stock | 10,000 units per cargo | declared scale |
+| Stock cap | 10 × initial stock (100,000 units) | declared |
 | Production assignment | building index `j` produces cargo `j mod cargo_count` | declared convention |
-| Production rate | 10 units per building per tick | declared |
-| Demand | each city consumes 5 units of every cargo per tick | declared |
+| Production rate | 1 unit per building per tick | declared |
+| Demand | each city consumes 0.04 units of every cargo per tick | declared |
 | Stock update | `stock' = clamp(stock + production - demand + noise, 0, cap)` | declared |
 | Noise | SplitMix64(seed), uniform in ±2 units, one draw per cargo per tick in cargo-index order | declared |
 | Price | `base × (1 + factor × (1 - stock / initial_stock))` | declared; base and factor from `.cty` |
@@ -38,6 +38,10 @@ by a declared index convention and must not be read as game behaviour.
 | Dump | one JSON line per month: month, then per-cargo name, stock and price to two decimals in cargo-index order | declared |
 
 ## Determinism
+
+The stock scale is chosen so the declared model does not saturate within a
+decade on the shipped maps; it is a model parameter, not a recovered original
+constant.
 
 The same world, seed, rules and month count produce byte-identical monthly
 dumps. Cargo is processed in index order and the generator draw order follows

@@ -1,5 +1,5 @@
 # Synthetic overconsumption scenario for claim C2 bounds. Not original data.
-# Zero production, high demand: reaches zero stock and the price ceiling.
-cities 10
+# Zero production, extreme demand: reaches zero stock and the price ceiling.
+cities 10000
 buildings 0
 cargo Coal 100.0 0.8 0
