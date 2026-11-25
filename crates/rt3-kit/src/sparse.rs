@@ -91,7 +91,9 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
             take(bytes, &mut off, block_len)?;
         }
     }
-    let mask_bytes = capacity.checked_add(7)? / 8;
+    // Original reader 0x00517d90 uses (capacity + 8) >> 3, so exact
+    // multiples of eight still allocate a following mask byte.
+    let mask_bytes = capacity.checked_add(8)? >> 3;
     let mask = take(bytes, &mut off, mask_bytes)?;
     let mut records = Vec::new();
     records.try_reserve_exact(active).ok()?;
@@ -135,4 +137,50 @@ pub(crate) fn read(bytes: &[u8], spec: Spec) -> Option<SparseBlobCollection> {
         off += 1;
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn push_u32(out: &mut Vec<u8>, value: u32) {
+        out.extend_from_slice(&value.to_le_bytes());
+    }
+
+    #[test]
+    fn exact_eight_capacity_allocates_two_mask_bytes() {
+        let spec = Spec {
+            outer: 0x32dc,
+            inner: 0x4e99,
+            end: 0x4e9a,
+            preamble: None,
+            blob_bytes: 4,
+        };
+        let mut bytes = vec![0u8; 0x3000];
+        push_u32(&mut bytes, spec.outer);
+        push_u32(&mut bytes, spec.inner);
+        for word in [0, 6, 10, 20, 8, 1, 0] {
+            push_u32(&mut bytes, word);
+        }
+        for level in 0..4 {
+            push_u32(&mut bytes, if level == 0 { 1 } else { 0 });
+            push_u32(&mut bytes, 0);
+            push_u32(&mut bytes, 0);
+        }
+        bytes.extend([0xfe, 0xff]); // slot 0 active; original allocates two bytes
+        bytes.extend_from_slice(&[7; 6]);
+        bytes.extend_from_slice(&4u16.to_le_bytes());
+        bytes.extend_from_slice(&[1, 2, 3, 4]);
+        push_u32(&mut bytes, spec.end);
+
+        let collection = read(&bytes, spec).expect("exact-eight sparse collection");
+        assert_eq!(collection.capacity, 8);
+        assert_eq!(collection.records.len(), 1);
+        assert_eq!(collection.records[0].slot, 0);
+        assert_eq!(collection.records[0].data, [1, 2, 3, 4]);
+        assert_eq!(collection.end_offset + 4, bytes.len());
+        for end in 0..bytes.len() {
+            assert!(read(&bytes[..end], spec).is_none(), "accepted prefix {end}");
+        }
+    }
 }

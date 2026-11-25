@@ -26,8 +26,9 @@ and four level triples. Level 0 is `(1,0,0)`. Each populated later level
 carries `capacity × 12` bytes before the absence mask; this is used by
 events, while the shipped building levels carry no such payload.
 
-After `ceil(capacity/8)` absence bits, each active slot stores six prefix
-bytes, a 16-bit length and exactly that many blob bytes. The parser
+After `(capacity + 8) >> 3` allocated mask bytes (including a following byte
+at exact multiples of eight), each active slot stores six prefix bytes, a
+16-bit length and exactly that many blob bytes. The parser
 checks the active count and terminator, uses checked arithmetic and
 fallible reservations, and rejects excess active records before growth.
 
