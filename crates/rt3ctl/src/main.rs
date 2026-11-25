@@ -232,6 +232,22 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
     }
 }
 
+/// Resolves an install-backed fixture named by an environment variable. A
+/// relative value is always taken from the repository root, as the evidence
+/// docs give it, never from the crate directory the tests run in.
+#[cfg(test)]
+pub(crate) fn fixture_path(name: &str) -> Option<PathBuf> {
+    let path = PathBuf::from(std::env::var_os(name)?);
+    if path.is_absolute() {
+        return Some(path);
+    }
+    Some(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(path),
+    )
+}
+
 pub(crate) fn install_root(explicit: Option<PathBuf>) -> Option<PathBuf> {
     explicit.or_else(|| std::env::var_os("RT3_HOME").map(PathBuf::from))
 }

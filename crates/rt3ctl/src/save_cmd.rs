@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn valid_json_includes_actor_names() {
-        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+        let Some(path) = crate::fixture_path("RT3_CONTROL_SAVE") else {
             eprintln!("RT3_CONTROL_SAVE unset; skipping JSON actor check");
             return;
         };
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn invalid_actor_name_is_an_error_not_json() {
-        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+        let Some(path) = crate::fixture_path("RT3_CONTROL_SAVE") else {
             eprintln!("RT3_CONTROL_SAVE unset; skipping invalid-name JSON check");
             return;
         };
