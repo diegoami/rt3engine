@@ -8,7 +8,7 @@
   "tiles": {"section_offset": 3574574, "records": 10240, "dynamic_entries": 0, "end_offset": 4975874},
   "cities": {"section_offset": 5817066, "capacity": 70, "records": 68, "end_offset": 5879243},
   "buildings": {"section_offset": 5096090, "capacity": 530, "records": 520, "end_offset": 5616761},
-  "companies": {"section_offset": 5710149, "capacity": 5, "records": 3, "end_offset": 5801314},
+  "companies": {"section_offset": 5710149, "capacity": 5, "records": 3, "end_offset": 5801314, "founded_years": [1830, 1830, 1829]},
   "players": {"section_offset": 5801645, "capacity": 4, "records": 3, "end_offset": 5811459},
   "events": {"section_offset": 5992027, "capacity": 50, "records": 39, "end_offset": 6078483}
 }

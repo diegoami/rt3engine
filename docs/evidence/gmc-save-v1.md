@@ -77,6 +77,10 @@ This is an independently generated **`.gms`**, not the previously assumed
 | Cities | 5,817,066 | 70 slots; 68 records |
 | Events | 5,992,027 | 50 slots; 39 records |
 
+The companies' founding-year fields are `[1830, 1830, 1829]`: the two
+liquidated AI companies retain 1830, while Great Republic matches the controlled
+January 1829 creation state.
+
 The exact artifact is
 [controlled-save-inventory-v1.json](controlled-save-inventory-v1.json), with
 producer `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json`.

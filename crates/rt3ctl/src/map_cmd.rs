@@ -297,7 +297,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         tiles: Option<(usize, usize, usize, usize)>,
         cities: Option<(usize, usize, usize, usize)>,
         buildings: Option<(usize, usize, usize, usize)>,
-        companies: Option<(usize, usize, usize, usize)>,
+        companies: Option<(usize, usize, usize, usize, Vec<u32>)>,
         players: Option<(usize, usize, usize, usize)>,
         events: Option<(usize, usize, usize, usize)>,
         status: Option<&'static str>,
@@ -347,8 +347,20 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         let buildings = buildings::read(&bytes)
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
-        let companies = companies::read(&bytes)
-            .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
+        let companies = companies::read(&bytes).map(|c| {
+            let years = c
+                .records
+                .iter()
+                .map(|record| companies::founded_year(record).unwrap())
+                .collect();
+            (
+                c.section_offset,
+                c.capacity,
+                c.records.len(),
+                c.end_offset,
+                years,
+            )
+        });
         let players = players::read(&bytes)
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         let events = events::read(&bytes)
@@ -410,8 +422,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             let companies = match &r.companies {
-                Some((off, capacity, records, end)) => format!(
-                    "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}}}"
+                Some((off, capacity, records, end, years)) => format!(
+                    "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}, \"founded_years\": {years:?}}}"
                 ),
                 None => "null".to_string(),
             };

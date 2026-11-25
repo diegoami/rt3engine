@@ -45,6 +45,14 @@ payload and the remaining record fields remain open.
 | Companies | `0x32CE / 0x61A9`; end `0x61AA / 0x61AB` | 30,340 | offset 4, 64 bytes |
 | Players | `0x32D0 / 0x5209`; end `0x520A / 0x520B` | 3,243 | offset 8, 31 bytes |
 
+Company record offset 67 is a little-endian **founding/creation year**. All 37
+shipped records have scenario-appropriate years: 1830 ×19, 1832 ×1, 1867 ×3,
+1870 ×8, 1871 ×1, 1872 ×1, 1939 ×2 and 1964 ×2. In the controlled save, the
+liquidated Edinburgh Express and London Rails records retain 1830, while the
+new Great Republic record has 1829, matching the displayed January 1829 state.
+Per-record `founded_years` arrays are retained in both all-map and save JSON
+artifacts. Other company fields remain open.
+
 All **43 shipped maps** parse both collections: 40 version-9701 maps plus the
 three legacy 9609/9610 maps. Totals are **37 company records** and **145 player
 records**; every raw name field is nonempty printable ASCII.
@@ -53,7 +61,7 @@ Both original saves also parse:
 
 | Save | Companies | Players |
 |---|---|---|
-| Controlled British Isles `.gms` | 3; third is `Great Republic` | 3; first is `George Hudson` |
+| Controlled British Isles `.gms` | 3; third is `Great Republic`, founded 1829 | 3; first is `George Hudson` |
 | Supplied `.gmc` | 0 | 4; fourth is `Unassigned` |
 
 The controlled save also contains liquidated AI companies. Their presence is

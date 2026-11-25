@@ -83,12 +83,19 @@ pub fn run(command: SaveInspect) -> ExitCode {
         save.buildings.records.len(),
         save.buildings.end_offset
     );
+    let founded_years = save
+        .companies
+        .records
+        .iter()
+        .map(|record| rt3_kit::companies::founded_year(record).unwrap())
+        .collect::<Vec<_>>();
     println!(
-        "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"founded_years\": {:?}}},",
         save.companies.section_offset,
         save.companies.capacity,
         save.companies.records.len(),
-        save.companies.end_offset
+        save.companies.end_offset,
+        founded_years
     );
     println!(
         "  \"players\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
