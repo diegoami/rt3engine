@@ -18,14 +18,17 @@ Established 2026-11-24, milestone 4. Implemented as `rt3_kit::save` and
 ## Supplied-save structural inventory
 
 The container reports version 9701 and satisfies every existing framed
-parser: coarse terrain, per-cell/tile records, and sparse city, building
-and event collections.
+parser: coarse terrain, per-cell/tile records, and sparse city, building,
+company, player and event collections. Company/player framing is documented in
+[gmp-actors-v1.md](gmp-actors-v1.md).
 
 | Section | Offset | Records / dimensions |
 |---|---:|---:|
 | Coarse terrain | 35,804 | 257 rows × 385 columns; −12.0…1821.4 m |
 | Tiles | 2,601,345 | 6,144 records; 0 dynamic entries |
 | Buildings | 3,579,183 | 430 slots; 410 records |
+| Companies | 4,063,347 | 5 capacity; 0 records |
+| Players | 4,063,823 | 6 capacity; 4 records |
 | Cities | 4,084,035 | 70 slots; 59 records |
 | Events | 4,244,640 | 30 slots; 17 records |
 
@@ -69,6 +72,8 @@ This is an independently generated **`.gms`**, not the previously assumed
 | Coarse terrain | 33,069 | 513 rows × 321 columns; 0.0…760.5 m |
 | Tiles | 3,574,574 | 10,240 records; 0 dynamic entries |
 | Buildings | 5,096,090 | 530 slots; 520 records |
+| Companies | 5,710,149 | 5 capacity; 3 records |
+| Players | 5,801,645 | 4 capacity; 3 records |
 | Cities | 5,817,066 | 70 slots; 68 records |
 | Events | 5,992,027 | 50 slots; 39 records |
 

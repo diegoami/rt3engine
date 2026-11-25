@@ -8,5 +8,7 @@
   "tiles": {"section_offset": 2601345, "records": 6144, "dynamic_entries": 0, "end_offset": 3469555},
   "cities": {"section_offset": 4084035, "capacity": 70, "records": 59, "end_offset": 4137995},
   "buildings": {"section_offset": 3579183, "capacity": 430, "records": 410, "end_offset": 3989731},
+  "companies": {"section_offset": 4063347, "capacity": 5, "records": 0, "end_offset": 4063492},
+  "players": {"section_offset": 4063823, "capacity": 6, "records": 4, "end_offset": 4076880},
   "events": {"section_offset": 4244640, "capacity": 30, "records": 17, "end_offset": 4282475}
 }

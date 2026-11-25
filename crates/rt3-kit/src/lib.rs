@@ -12,11 +12,13 @@
 //! | `map` | `maps/*.gmp`, `Data/GrayscaleMaps/*.TGA` | milestone 3 |
 //! | `cities` | city collections and raw labels in `maps/*.gmp` | milestone 3b |
 //! | `buildings` | placed building/industry collections | milestone 3b |
+//! | `companies` | company collections and raw names | milestone 4 |
+//! | `players` | player collections and raw names | milestone 4 |
 //! | `events` | scenario event records, names and text | milestone 3b |
 //! | `terrain` | terrain heightfields inside `maps/*.gmp` | milestone 3b |
 //! | `tiles` | per-cell arrays and per-tile terrain records | milestone 3b |
 //! | `render` | north-up RGB PNG views of decoded heightfields | milestone 3b |
-//! | `save` | `Saved Games/*.sav` | milestone 4 |
+//! | `save` | `Saved Games/*.gmc` and `*.gms` | milestone 4 |
 //!
 //! Every format claim in this crate must be backed by an artifact under
 //! `docs/evidence/` that re-derives it from `RT3_HOME`. No original bytes are
@@ -27,14 +29,18 @@
 //! (typed game-data records and text/config); milestone 3 — `map`
 //! (`.gmp` prelude); milestone 3b — `terrain` (coarse heightfield),
 //! `tiles` (per-tile records), `cities`, `buildings`, `events` and
-//! `render` (north-up PNG); milestone 4 — `save` (original GMC structural
-//! inventory). The remaining families land with their milestones.
+//! `render` (north-up PNG); milestone 4 — `save` (original GMC/GMS structural
+//! inventory), with `companies` and `players` fixed collections. The remaining
+//! families land with their milestones.
 
 pub mod buildings;
 pub mod cities;
+pub mod companies;
 pub mod events;
+mod fixed;
 pub mod map;
 pub mod pk4;
+pub mod players;
 pub mod render;
 pub mod save;
 mod sparse;

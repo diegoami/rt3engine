@@ -23,7 +23,7 @@ Checks self-skip without `RT3_HOME` (CI).
 | `pk4-archives-v1.json` | PK4 aggregate: 18 archives, format version 1003, 8,375 entries, ~387 MB raw payload, per-archive totals (metadata only) | `rt3ctl pk4 list --json` |
 | `typed-tables-v1.json` | Typed-data aggregate: 41 cargo, 190 building types, 67 behaviors (99 subrecords, 35 scripts), 66 locomotives, 145 car types, 268 tree rows, 3,868 language strings, engine.cfg 800×600 | `rt3ctl typed list --json` |
 | `maps-inventory-v1.json` | Map inventory: 43 shipped maps (40 version-9701 current, 3 legacy 9609/9610) with text lengths and tail sizes (metadata only) | `rt3ctl map list --json` |
-| `terrain-scan-v1.json` | Terrain and sparse-map collections: all 43 shipped maps verified, with exact offsets, dimensions, height statistics and per-map tile/city/building/event capacities and counts | `rt3ctl map terrain --all --json` |
+| `terrain-scan-v1.json` | Terrain and sparse-map collections: all 43 shipped maps verified, with exact offsets, dimensions, height statistics and per-map tile/city/building/company/player/event capacities and counts | `rt3ctl map terrain --all --json` |
 | `save-inventory-v1.json` | One owner-supplied version-9701 `.gmc` save: identity, source-map basename, framed terrain and tile/city/building/event structural inventory; optional `RT3_SAVE` fixture | `rt3ctl save inspect --path "$RT3_SAVE" --json` |
 | `controlled-save-inventory-v1.json` | One independently generated and read-back-verified version-9701 `.gms` save at a recorded scenario/company start; optional `RT3_CONTROL_SAVE` fixture | `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json` |
 
@@ -33,7 +33,8 @@ Format findings with method and provenance live beside them:
 and [gmp-format-v1.md](gmp-format-v1.md) (map prelude; claim level: parse).
 City collection findings live in [gmp-cities-v1.md](gmp-cities-v1.md);
 building/event collections are in
-[gmp-collections-v1.md](gmp-collections-v1.md).
+[gmp-collections-v1.md](gmp-collections-v1.md); company/player collections are
+in [gmp-actors-v1.md](gmp-actors-v1.md).
 Original save inventory findings are in
 [gmc-save-v1.md](gmc-save-v1.md).
 Milestone 3 adds map findings; later milestones add save
