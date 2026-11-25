@@ -196,10 +196,14 @@ fn rejects_non_map_files_with_a_named_error() {
     let path = std::env::temp_dir().join(format!("rt3engine-not-a-map-{}.bin", std::process::id()));
     fs::write(&path, b"not a map at all").unwrap();
     let error = world::load_map(&path).expect_err("non-map file must be rejected");
+    let detail = error.detail().to_string();
     fs::remove_file(&path).ok();
-    let message = error.to_string();
     assert!(
-        message.contains("not a supported version-9701 map"),
-        "unexpected error: {message}"
+        detail.contains("not a supported version-9701 map"),
+        "unexpected error: {detail}"
+    );
+    assert!(
+        !detail.contains(&path.display().to_string()),
+        "error detail leaks the file path: {detail}"
     );
 }

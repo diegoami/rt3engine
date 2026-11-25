@@ -55,14 +55,45 @@ golden hash on the committed synthetic scenario
 
 ## Divergence (C5)
 
-Claim C5 compares the kernel's British Isles start state with the controlled
-January 1829 original save and lists every difference, including the declared
-rules above that have no original-constant provenance. Those findings are
-appended here when C5 lands; they are already model assumptions, not recovered
-original behaviour.
+`rt3ctl sim compare "British Isles" --save <controlled save> --json` compares the
+kernel's start state with the controlled original save at January 1829. Measured
+on the M5 candidate with `rt3engine-bi-18290101-202.gms`:
+
+| Item | Kernel (map) | Controlled save | Cause |
+|---|---:|---:|---|
+| Terrain dimensions | rows 513, cols 321 | rows 513, cols 321 | same source map; no divergence |
+| City records | 68 | 68 | counts agree; city attributes are not modelled |
+| Placed building records | 0 | 520 | the map's placed-building collection is empty; the 520 records are present only in the save |
+| Companies | 0 (not modelled) | 3 | company records are save state and out of M5 |
+| Cargo catalogue | 41 types | not in the save | shared typed data from the installation |
+
+Model rules with no original-constant provenance, all of which are divergences
+from the original game rather than reproductions of it:
+
+- production assignment (building index `j` → cargo `j mod cargo_count`) and the
+  1-unit-per-building-per-tick rate;
+- the stock update `stock' = clamp(stock + production - demand + noise, 0, cap)`
+  and its clamps;
+- demand of 0.04 units per city per cargo per tick;
+- 10,000 initial stock and the 10× stock cap;
+- ±2 units of SplitMix64(seed) noise per cargo per tick;
+- the price formula and its 0.5×–1.5× base bounds;
+- 30-tick months.
+
+Consequence on British Isles: the map carries no placed building records, so
+declared production is zero and every cargo drains over the decade; the save's
+520 building records and three companies are not modelled. The
+comparison establishes agreement in terrain dimensions and city record counts
+and names the remaining differences rather than reproducing the original
+economy.
 
 ## Reproduce
 
 ```sh
 cargo test -p engine --test economy
+export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
+export RT3_CONTROL_SAVE="review-tmp/saves/rt3engine-bi-18290101-202.gms"
+cargo test -p rt3ctl --test sim_compare
+cargo run -q --release -p rt3ctl -- sim compare "British Isles" \
+  --save "$RT3_CONTROL_SAVE" --json
 ```
