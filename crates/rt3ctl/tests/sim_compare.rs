@@ -12,7 +12,15 @@ fn home() -> Option<PathBuf> {
 }
 
 fn save() -> Option<PathBuf> {
-    std::env::var_os("RT3_CONTROL_SAVE").map(PathBuf::from)
+    let path = PathBuf::from(std::env::var_os("RT3_CONTROL_SAVE")?);
+    if path.is_absolute() {
+        return Some(path);
+    }
+    // The documented value is repository-relative; the child process runs
+    // from the crate directory, so resolve it against the repository root.
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let candidate = repo.join(&path);
+    Some(if candidate.exists() { candidate } else { path })
 }
 
 fn compare(home: &Path, save: &Path, json: bool) -> std::process::Output {

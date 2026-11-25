@@ -27,6 +27,11 @@ pub struct WorldError {
 }
 
 impl WorldError {
+    /// The failure detail, without the machine-specific path.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
     fn new(path: &Path, detail: impl fmt::Display) -> WorldError {
         WorldError {
             path: path.to_path_buf(),

@@ -63,7 +63,7 @@ on the M5 candidate with `rt3engine-bi-18290101-202.gms`:
 |---|---:|---:|---|
 | Terrain dimensions | rows 513, cols 321 | rows 513, cols 321 | same source map; no divergence |
 | City records | 68 | 68 | counts agree; city attributes are not modelled |
-| Placed building records | 0 | 520 | the `.gmp` placed-building collection is empty; industries placed during play live only in the save |
+| Placed building records | 0 | 520 | the map's placed-building collection is empty; the 520 records are present only in the save |
 | Companies | 0 (not modelled) | 3 | company records are save state and out of M5 |
 | Cargo catalogue | 41 types | not in the save | shared typed data from the installation |
 
@@ -72,6 +72,8 @@ from the original game rather than reproductions of it:
 
 - production assignment (building index `j` → cargo `j mod cargo_count`) and the
   1-unit-per-building-per-tick rate;
+- the stock update `stock' = clamp(stock + production - demand + noise, 0, cap)`
+  and its clamps;
 - demand of 0.04 units per city per cargo per tick;
 - 10,000 initial stock and the 10× stock cap;
 - ±2 units of SplitMix64(seed) noise per cargo per tick;
@@ -80,7 +82,7 @@ from the original game rather than reproductions of it:
 
 Consequence on British Isles: the map carries no placed building records, so
 declared production is zero and every cargo drains over the decade; the save's
-520 runtime building records and three companies are not modelled. The
+520 building records and three companies are not modelled. The
 comparison establishes agreement in terrain dimensions and city record counts
 and names the remaining differences rather than reproducing the original
 economy.

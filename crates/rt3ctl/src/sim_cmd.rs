@@ -206,6 +206,13 @@ where
     })
 }
 
+fn file_label(path: &Path) -> String {
+    path.file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("file")
+        .to_string()
+}
+
 fn resolve_map(root: &Path, name: &str) -> Result<PathBuf, String> {
     let direct = PathBuf::from(name);
     if direct.is_file() {
@@ -231,11 +238,10 @@ fn resolve_map(root: &Path, name: &str) -> Result<PathBuf, String> {
     }
     found.sort();
     match found.len() {
-        0 => Err(format!("no .gmp named {name:?} under {}", root.display())),
+        0 => Err(format!("no .gmp named {name:?} under the installation")),
         1 => Ok(found.remove(0)),
         _ => Err(format!(
-            "more than one .gmp named {name:?} under {}",
-            root.display()
+            "more than one .gmp named {name:?} under the installation"
         )),
     }
 }
@@ -291,7 +297,7 @@ pub fn run(inspect: SimInspect) -> ExitCode {
     let world = match world::load(&map, &root) {
         Ok(world) => world,
         Err(error) => {
-            eprintln!("rt3ctl: {error}");
+            eprintln!("rt3ctl: {}: {}", file_label(&map), error.detail());
             return ExitCode::from(1);
         }
     };
@@ -328,7 +334,7 @@ pub fn run_simulation(run: SimRun) -> ExitCode {
     let world = match world::load(&map, &root) {
         Ok(world) => world,
         Err(error) => {
-            eprintln!("rt3ctl: {error}");
+            eprintln!("rt3ctl: {}: {}", file_label(&map), error.detail());
             return ExitCode::from(1);
         }
     };
@@ -371,21 +377,21 @@ pub fn run_compare(compare: SimCompare) -> ExitCode {
     let world = match world::load(&map, &root) {
         Ok(world) => world,
         Err(error) => {
-            eprintln!("rt3ctl: {error}");
+            eprintln!("rt3ctl: {}: {}", file_label(&map), error.detail());
             return ExitCode::from(1);
         }
     };
     let bytes = match fs::read(&compare.save) {
         Ok(bytes) => bytes,
         Err(error) => {
-            eprintln!("rt3ctl: {}: {error}", compare.save.display());
+            eprintln!("rt3ctl: {}: {error}", file_label(&compare.save));
             return ExitCode::from(1);
         }
     };
     let Some(saved) = rt3_kit::save::from_bytes(&bytes) else {
         eprintln!(
             "rt3ctl: {}: not a supported version-9701 save",
-            compare.save.display()
+            file_label(&compare.save)
         );
         return ExitCode::from(1);
     };
@@ -412,7 +418,7 @@ pub fn run_compare(compare: SimCompare) -> ExitCode {
     if map_buildings != save_buildings {
         divergences.push(format!(
             "placed building records differ: map {map_buildings}, save {save_buildings}; \
-             runtime-placed records exist only in the save"
+             the records are present in the save but absent from the map"
         ));
     }
     if save_companies != 0 {
