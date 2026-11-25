@@ -1,7 +1,7 @@
 //! Install-backed check for claims C3/C4: `rt3ctl sim run` completes a decade
 //! on two shipped maps, emits one JSON line per month with an explicit stop
 //! reason, replays byte-identically for the same seed and diverges for a
-//! different seed.
+//! different seed. Every line is parsed as JSON before its schema is checked.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -37,86 +37,48 @@ fn hex(bytes: &[u8]) -> String {
     sha256(bytes).iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn parse_name(input: &str) -> (String, &str) {
-    let mut out = String::new();
-    let mut escaped = false;
-    for (index, c) in input.char_indices().skip(1) {
-        if escaped {
-            out.push(match c {
-                'n' => '\n',
-                't' => '\t',
-                'r' => '\r',
-                '"' => '"',
-                '\\' => '\\',
-                other => other,
-            });
-            escaped = false;
-        } else if c == '\\' {
-            escaped = true;
-        } else if c == '"' {
-            return (out, &input[index + 1..]);
-        } else {
-            out.push(c);
-        }
-    }
-    panic!("unterminated cargo name in {input:?}");
-}
-
-fn parse_number(input: &str) -> (f64, &str) {
-    let end = input
-        .find(|c: char| !(c.is_ascii_digit() || matches!(c, '-' | '+' | '.' | 'e' | 'E')))
-        .unwrap_or(input.len());
-    let value = input[..end]
-        .parse()
-        .unwrap_or_else(|_| panic!("bad number in {input:?}"));
-    (value, &input[end..])
-}
-
 type CargoEntry = (String, f64, f64);
-type MonthDump = (u32, Vec<CargoEntry>);
+type MonthDump = (u64, Vec<CargoEntry>);
 
-/// Strictly parses one monthly dump line: shape, month, then every cargo
-/// entry's name, stock and price. Malformed or partial JSON must fail.
+/// Parses one monthly dump line as JSON, then checks its schema: an integer
+/// month and a cargo array whose entries carry a string name and numeric
+/// stock and price. Malformed JSON or a wrong shape must fail.
 fn parse_dump_line(line: &str) -> MonthDump {
-    let rest = line
-        .strip_prefix("{\"month\":")
-        .unwrap_or_else(|| panic!("no month prefix: {line}"));
-    let (month, rest) = rest
-        .split_once(",\"cargo\":[")
-        .unwrap_or_else(|| panic!("no cargo array: {line}"));
-    let month: u32 = month
-        .parse()
-        .unwrap_or_else(|_| panic!("bad month: {line}"));
-    let body = rest
-        .strip_suffix("]}")
-        .unwrap_or_else(|| panic!("no line suffix: {line}"));
-    let mut entries = Vec::new();
-    let mut rest = body;
-    while !rest.is_empty() {
-        let after = rest
-            .strip_prefix("{\"name\":")
-            .unwrap_or_else(|| panic!("no name key: {line}"));
-        let (name, after) = parse_name(after);
-        let after = after
-            .strip_prefix(",\"stock\":")
-            .unwrap_or_else(|| panic!("no stock key: {line}"));
-        let (stock, after) = parse_number(after);
-        let after = after
-            .strip_prefix(",\"price\":")
-            .unwrap_or_else(|| panic!("no price key: {line}"));
-        let (price, after) = parse_number(after);
-        let after = after
-            .strip_prefix('}')
-            .unwrap_or_else(|| panic!("no entry close: {line}"));
-        entries.push((name, stock, price));
-        if after.is_empty() {
-            rest = after;
-        } else {
-            rest = after
-                .strip_prefix(',')
-                .unwrap_or_else(|| panic!("no entry separator: {line}"));
-        }
-    }
+    let value: serde_json::Value = serde_json::from_str(line)
+        .unwrap_or_else(|error| panic!("invalid JSON line ({error}): {line}"));
+    let object = value
+        .as_object()
+        .unwrap_or_else(|| panic!("line is not an object: {line}"));
+    let month = object
+        .get("month")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_else(|| panic!("month is not an unsigned integer: {line}"));
+    let cargo = object
+        .get("cargo")
+        .and_then(serde_json::Value::as_array)
+        .unwrap_or_else(|| panic!("cargo is not an array: {line}"));
+    let entries = cargo
+        .iter()
+        .map(|entry| {
+            let entry = entry
+                .as_object()
+                .unwrap_or_else(|| panic!("cargo entry is not an object: {line}"));
+            let name = entry
+                .get("name")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_else(|| panic!("cargo name is not a string: {line}"))
+                .to_string();
+            let stock = entry
+                .get("stock")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or_else(|| panic!("cargo stock is not a number: {line}"));
+            let price = entry
+                .get("price")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or_else(|| panic!("cargo price is not a number: {line}"));
+            (name, stock, price)
+        })
+        .collect();
     (month, entries)
 }
 
@@ -168,7 +130,7 @@ fn decade_runs_on_two_maps_replay_and_diverge() {
         let months = parse_dump(&text);
         assert_eq!(months.len(), 120, "{map}: one line per month");
         for (index, (month, entries)) in months.iter().enumerate() {
-            assert_eq!(*month, index as u32 + 1, "{map}: month sequence");
+            assert_eq!(*month, index as u64 + 1, "{map}: month sequence");
             assert_eq!(entries.len(), 41, "{map}: cargo entries in month {month}");
             let mut names = std::collections::HashSet::new();
             for (name, stock, price) in entries {
@@ -200,11 +162,21 @@ fn decade_runs_on_two_maps_replay_and_diverge() {
 
 #[test]
 fn malformed_dump_lines_are_rejected() {
+    let raw_control = format!(
+        "{{\"month\":1,\"cargo\":[{{\"name\":\"Coal{}\",\"stock\":1,\"price\":2.0}}]}}",
+        '\u{1}'
+    );
     for line in [
-        r#"{"month":1,"cargo":[not-json-seed-42]}"#,
+        // JSON syntax: trailing junk, trailing commas, invalid numbers.
+        r#"{"month":1,"cargo":[]} trailing"#,
+        r#"{"month":1,}"#,
+        r#"{"month":1,"cargo":[{"name":"Coal","stock":1,"price":2.0},]}"#,
+        r#"{"month":1,"cargo":[{"name":"Coal","stock":1.,"price":2.0}]}"#,
+        // Schema: wrong types and missing fields.
+        r#"{"month":"1","cargo":[]}"#,
+        r#"{"month":1,"cargo":[{"name":"Coal","stock":"1","price":2.0}]}"#,
         r#"{"month":1,"cargo":[{"name":"Coal","stock":1}]}"#,
-        r#"{"month":x,"cargo":[]}"#,
-        r#"{"month":1,"cargo":[{"name":"Coal","stock":1,"price":2}]} trailing"#,
+        &raw_control,
     ] {
         assert!(
             std::panic::catch_unwind(|| parse_dump_line(line)).is_err(),
