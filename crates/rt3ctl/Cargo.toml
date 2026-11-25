@@ -8,6 +8,7 @@ description = "RT3Engine command line: installation inventory, format inspection
 
 [dependencies]
 rt3-kit = { path = "../rt3-kit" }
+engine = { path = "../engine" }
 
 [lints]
 workspace = true
