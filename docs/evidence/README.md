@@ -19,7 +19,7 @@ Checks self-skip without `RT3_HOME` (CI).
 
 | Artifact | Claim | Producer |
 | --- | --- | --- |
-| `install-inventory-v1.json` | Aggregate installation inventory: 1,176 files, ~2.02 GB; per-top-level-entry and per-extension counts/sizes (metadata only) | `rt3ctl inventory --json` |
+| `install-inventory-v1.json` | Aggregate installation inventory: 1,177 files, ~2.03 GB; per-top-level-entry and per-extension counts/sizes (metadata only) | `rt3ctl inventory --json` |
 | `pk4-archives-v1.json` | PK4 aggregate: 18 archives, format version 1003, 8,375 entries, ~387 MB raw payload, per-archive totals (metadata only) | `rt3ctl pk4 list --json` |
 | `typed-tables-v1.json` | Typed-data aggregate: 41 cargo, 190 building types, 67 behaviors (99 subrecords, 35 scripts), 66 locomotives, 145 car types, 268 tree rows, 3,868 language strings, engine.cfg 800×600 | `rt3ctl typed list --json` |
 | `maps-inventory-v1.json` | Map inventory: 43 shipped maps (40 version-9701 current, 3 legacy 9609/9610) with text lengths and tail sizes (metadata only) | `rt3ctl map list --json` |

@@ -23,6 +23,46 @@ if [ "$mode" != "check" ] && [ "$mode" != "regen" ]; then
     exit 2
 fi
 
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 2
+cd "$repo_root" || exit 2
+
+# check_documented_totals verifies the install totals that the evidence README
+# and the environment doc state in prose against the committed artifact, so a
+# refreshed inventory cannot leave a stale number behind. It needs no
+# installation, so it also runs in check mode when RT3_HOME is unset (CI).
+check_documented_totals() {
+    artifact=docs/evidence/install-inventory-v1.json
+    totals=$(awk '
+        /"total":/ { intotal = 1; next }
+        intotal && /"files":/ { line = $0; gsub(/[^0-9]/, "", line); files = line; next }
+        intotal && /"bytes":/ { line = $0; gsub(/[^0-9]/, "", line); bytes = line; exit }
+        END { print files, bytes }
+    ' "$artifact")
+    files=${totals%% *}
+    bytes=${totals##* }
+    if [ -z "$files" ] || [ -z "$bytes" ]; then
+        echo "documented totals: cannot read install totals from $artifact" >&2
+        return 2
+    fi
+    gb=$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1000000000 }')
+    drift=0
+    for doc in docs/evidence/README.md docs/environment.md; do
+        if ! tr -d ',' < "$doc" | grep -q "$files files"; then
+            echo "documented totals drift: $doc does not state $files files" >&2
+            drift=1
+        fi
+        if ! tr -d ',' < "$doc" | grep -q "$gb GB"; then
+            echo "documented totals drift: $doc does not state ~$gb GB" >&2
+            drift=1
+        fi
+    done
+    return "$drift"
+}
+
+if [ "$mode" = "check" ]; then
+    check_documented_totals || exit $?
+fi
+
 if [ -z "$RT3_HOME" ]; then
     echo "RT3_HOME unset; skipping evidence-$mode"
     exit 0
@@ -32,9 +72,6 @@ if ! command -v "$CARGO" >/dev/null 2>&1; then
     echo "cargo not found (tried CARGO=$CARGO)" >&2
     exit 2
 fi
-
-repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 2
-cd "$repo_root" || exit 2
 
 # process [--release] TARGET PRODUCER-ARGS...
 #   0 = ok, 1 = drift (check mode), 2 = producer or environment failure.
