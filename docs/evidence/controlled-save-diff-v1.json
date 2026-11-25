@@ -1,0 +1,17 @@
+{
+  "left": {"file": "rt3engine-bi-18290101-202.gms", "sha256": "f892bc28ea1fb3bb1ff60f3ed443e82de7818d3fd7a7c26a93e974cfb69ac6bc"},
+  "right": {"file": "rt3c-bi-1829-02.gms", "sha256": "225a98ff8939ae3b4ff5fb6f36cc4b730042017d83f379333d55d783ab0e75b6"},
+  "file_bytes_delta": 30604,
+  "source_map": {"left": "British Isles.gmp", "right": "British Isles.gmp", "equal": true},
+  "sections": {
+    "terrain": {"offset_delta": 0, "rows_delta": 0, "cols_delta": 0},
+    "tiles": {"offset_delta": -138, "end_offset_delta": -1210, "capacity_delta": 0, "records_delta": 0},
+    "cities": {"offset_delta": 30595, "end_offset_delta": 30595, "capacity_delta": 0, "records_delta": 0},
+    "buildings": {"offset_delta": 3586, "end_offset_delta": 26611, "capacity_delta": 20, "records_delta": 23},
+    "companies": {"offset_delta": 30595, "end_offset_delta": 30595, "capacity_delta": 0, "records_delta": 0},
+    "players": {"offset_delta": 30595, "end_offset_delta": 30595, "capacity_delta": 0, "records_delta": 0},
+    "events": {"offset_delta": 30595, "end_offset_delta": 30595, "capacity_delta": 0, "records_delta": 0}
+  },
+  "company_changes": {"records": [{"index": 0, "left_name": "Edinburgh Express (Liquidated)", "right_name": "Edinburgh Express (Liquidated)", "identical": true, "byte_differences": 0, "differing_offsets": []}, {"index": 1, "left_name": "London Rails (Liquidated)", "right_name": "London Rails (Liquidated)", "identical": true, "byte_differences": 0, "differing_offsets": []}, {"index": 2, "left_name": "Great Republic", "right_name": "Great Republic", "identical": false, "byte_differences": 1, "differing_offsets": [55]}], "identical_records": 2, "different_records": 1},
+  "player_changes": {"records": [{"index": 0, "left_name": "George Hudson", "right_name": "George Hudson", "identical": false, "byte_differences": 3, "differing_offsets": [485, 486, 487]}, {"index": 1, "left_name": "Isambard Kingdom Brunel", "right_name": "Isambard Kingdom Brunel", "identical": false, "byte_differences": 2, "differing_offsets": [486, 487]}, {"index": 2, "left_name": "Sir John Forrest", "right_name": "Sir John Forrest", "identical": true, "byte_differences": 0, "differing_offsets": []}], "identical_records": 1, "different_records": 2}
+}

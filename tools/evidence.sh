@@ -15,6 +15,7 @@ mode="${1:-}"
 RT3_HOME="${RT3_HOME:-}"
 RT3_SAVE="${RT3_SAVE:-}"
 RT3_CONTROL_SAVE="${RT3_CONTROL_SAVE:-}"
+RT3_CONTROL_SAVE_2="${RT3_CONTROL_SAVE_2:-}"
 CARGO="${CARGO:-cargo}"
 
 if [ "$mode" != "check" ] && [ "$mode" != "regen" ]; then
@@ -84,5 +85,10 @@ if [ -n "$RT3_CONTROL_SAVE" ]; then
     process --release docs/evidence/controlled-save-inventory-v1.json save inspect --path "$RT3_CONTROL_SAVE" --json || status=$?
 else
     echo "RT3_CONTROL_SAVE unset; skipping optional controlled-save-inventory-$mode"
+fi
+if [ -n "$RT3_CONTROL_SAVE" ] && [ -n "$RT3_CONTROL_SAVE_2" ]; then
+    process --release docs/evidence/controlled-save-diff-v1.json save diff --path-a "$RT3_CONTROL_SAVE" --path-b "$RT3_CONTROL_SAVE_2" --json || status=$?
+else
+    echo "RT3_CONTROL_SAVE_2 unset; skipping optional controlled-save-diff-$mode"
 fi
 exit "$status"
