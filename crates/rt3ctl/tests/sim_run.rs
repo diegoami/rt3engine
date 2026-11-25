@@ -37,20 +37,91 @@ fn hex(bytes: &[u8]) -> String {
     sha256(bytes).iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn months_in(dump: &str) -> Vec<u32> {
-    dump.lines()
-        .map(|line| {
-            assert!(
-                line.starts_with("{\"month\":")
-                    && line.contains("\"cargo\":[")
-                    && line.ends_with("]}"),
-                "unexpected dump line: {line}"
-            );
-            let rest = &line["{\"month\":".len()..];
-            let end = rest.find(',').expect("month terminator");
-            rest[..end].parse().expect("month number")
-        })
-        .collect()
+fn parse_name(input: &str) -> (String, &str) {
+    let mut out = String::new();
+    let mut escaped = false;
+    for (index, c) in input.char_indices().skip(1) {
+        if escaped {
+            out.push(match c {
+                'n' => '\n',
+                't' => '\t',
+                'r' => '\r',
+                '"' => '"',
+                '\\' => '\\',
+                other => other,
+            });
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            return (out, &input[index + 1..]);
+        } else {
+            out.push(c);
+        }
+    }
+    panic!("unterminated cargo name in {input:?}");
+}
+
+fn parse_number(input: &str) -> (f64, &str) {
+    let end = input
+        .find(|c: char| !(c.is_ascii_digit() || matches!(c, '-' | '+' | '.' | 'e' | 'E')))
+        .unwrap_or(input.len());
+    let value = input[..end]
+        .parse()
+        .unwrap_or_else(|_| panic!("bad number in {input:?}"));
+    (value, &input[end..])
+}
+
+type CargoEntry = (String, f64, f64);
+type MonthDump = (u32, Vec<CargoEntry>);
+
+/// Strictly parses one monthly dump line: shape, month, then every cargo
+/// entry's name, stock and price. Malformed or partial JSON must fail.
+fn parse_dump_line(line: &str) -> MonthDump {
+    let rest = line
+        .strip_prefix("{\"month\":")
+        .unwrap_or_else(|| panic!("no month prefix: {line}"));
+    let (month, rest) = rest
+        .split_once(",\"cargo\":[")
+        .unwrap_or_else(|| panic!("no cargo array: {line}"));
+    let month: u32 = month
+        .parse()
+        .unwrap_or_else(|_| panic!("bad month: {line}"));
+    let body = rest
+        .strip_suffix("]}")
+        .unwrap_or_else(|| panic!("no line suffix: {line}"));
+    let mut entries = Vec::new();
+    let mut rest = body;
+    while !rest.is_empty() {
+        let after = rest
+            .strip_prefix("{\"name\":")
+            .unwrap_or_else(|| panic!("no name key: {line}"));
+        let (name, after) = parse_name(after);
+        let after = after
+            .strip_prefix(",\"stock\":")
+            .unwrap_or_else(|| panic!("no stock key: {line}"));
+        let (stock, after) = parse_number(after);
+        let after = after
+            .strip_prefix(",\"price\":")
+            .unwrap_or_else(|| panic!("no price key: {line}"));
+        let (price, after) = parse_number(after);
+        let after = after
+            .strip_prefix('}')
+            .unwrap_or_else(|| panic!("no entry close: {line}"));
+        entries.push((name, stock, price));
+        if after.is_empty() {
+            rest = after;
+        } else {
+            rest = after
+                .strip_prefix(',')
+                .unwrap_or_else(|| panic!("no entry separator: {line}"));
+        }
+    }
+    (month, entries)
+}
+
+fn parse_dump(dump: &str) -> Vec<MonthDump> {
+    dump.lines().map(parse_dump_line).collect()
 }
 
 #[test]
@@ -94,9 +165,26 @@ fn decade_runs_on_two_maps_replay_and_diverge() {
         assert_ne!(a, c, "{map}: a different seed must change the dump");
 
         let text = String::from_utf8(a.clone()).expect("dump is UTF-8");
-        let months = months_in(&text);
+        let months = parse_dump(&text);
         assert_eq!(months.len(), 120, "{map}: one line per month");
-        assert!(months.iter().copied().eq(1..=120), "{map}: month sequence");
+        for (index, (month, entries)) in months.iter().enumerate() {
+            assert_eq!(*month, index as u32 + 1, "{map}: month sequence");
+            assert_eq!(entries.len(), 41, "{map}: cargo entries in month {month}");
+            let mut names = std::collections::HashSet::new();
+            for (name, stock, price) in entries {
+                assert!(!name.is_empty(), "{map}: empty cargo name");
+                assert!(names.insert(name), "{map}: duplicate cargo {name}");
+                assert!(
+                    stock.is_finite() && *stock >= 0.0,
+                    "{map}: bad stock {stock}"
+                );
+                assert!(
+                    price.is_finite() && *price >= 0.0,
+                    "{map}: bad price {price}"
+                );
+            }
+            assert_eq!(names.len(), 41, "{map}: 41 distinct cargo names");
+        }
 
         let digest = hex(&a);
         assert!(
@@ -108,4 +196,23 @@ fn decade_runs_on_two_maps_replay_and_diverge() {
             fs::remove_file(path).ok();
         }
     }
+}
+
+#[test]
+fn malformed_dump_lines_are_rejected() {
+    for line in [
+        r#"{"month":1,"cargo":[not-json-seed-42]}"#,
+        r#"{"month":1,"cargo":[{"name":"Coal","stock":1}]}"#,
+        r#"{"month":x,"cargo":[]}"#,
+        r#"{"month":1,"cargo":[{"name":"Coal","stock":1,"price":2}]} trailing"#,
+    ] {
+        assert!(
+            std::panic::catch_unwind(|| parse_dump_line(line)).is_err(),
+            "malformed line accepted: {line}"
+        );
+    }
+    let (month, entries) =
+        parse_dump_line(r#"{"month":3,"cargo":[{"name":"Coal","stock":1.50,"price":2.0}]}"#);
+    assert_eq!(month, 3);
+    assert_eq!(entries, vec![("Coal".to_string(), 1.5, 2.0)]);
 }
