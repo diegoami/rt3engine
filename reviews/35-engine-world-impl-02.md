@@ -24,3 +24,15 @@ No new findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- `engine::world` and `rt3ctl sim inspect` land claim C1's slice: PR #46,
+  merged as `4eb6c32`.
+- Malformed preludes, non-map files and legacy versions are rejected by the
+  map parser before a world is built.
+- `cargo test -p engine` passes 4 install-backed tests; `make fmt`,
+  `make clippy` and `make test` are green; CI green.
+- Reviews: `reviews/35-engine-world-impl-01.md` (BLOCK) and this file (AGREE).
+
+— Implementer (zai-coding-plan/glm-5.3)
