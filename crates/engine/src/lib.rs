@@ -14,7 +14,8 @@
 //! (headless autoplay), `checkpoint` (versioned native persistence).
 //!
 //! Status: milestone 5 — `world` (map-grounded structural world: terrain,
-//! city and building records, cargo catalogue). The economy tick lands with
-//! the rest of milestone 5.
+//! city and building records, cargo catalogue) and `economy` (declared
+//! fixed-tick cargo supply, demand and prices).
 
+pub mod economy;
 pub mod world;
