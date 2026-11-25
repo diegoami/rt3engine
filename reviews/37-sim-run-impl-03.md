@@ -36,3 +36,17 @@ No findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- `rt3ctl sim run` and the decade determinism checks land claims C3/C4's
+  slice: PR #48, merged as `7d8a1bc`.
+- One JSON line per month, an explicit `completed` stop reason and a dump
+  SHA-256; British Isles and California Island complete 120 months, replay for
+  the same seed and diverge for another.
+- Monthly lines are validated with a test-only `serde_json` dependency; malformed
+  lines are rejected.
+- Reviews: `reviews/37-sim-run-impl-01.md` (BLOCK), `-02.md` (BLOCK),
+  `-03.md` (AGREE).
+
+— Implementer (zai-coding-plan/glm-5.3)
