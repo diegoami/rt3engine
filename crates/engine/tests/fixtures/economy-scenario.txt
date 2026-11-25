@@ -1,0 +1,8 @@
+# Synthetic economy scenario for claim C2. Not original game data.
+# cities <count>
+# buildings <count>
+# cargo <name> <base price> <factor> <index>
+cities 10
+buildings 8
+cargo Coal 100.0 0.2 0
+cargo Grain 50.0 0.3 1
