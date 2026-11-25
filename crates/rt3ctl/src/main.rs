@@ -18,6 +18,7 @@ mod inventory;
 mod map_cmd;
 mod pk4_cmd;
 mod save_cmd;
+mod save_diff;
 mod typed_cmd;
 
 use std::path::PathBuf;
@@ -32,6 +33,7 @@ Usage:
   rt3ctl map list [--path <install-root>] [--json]
   rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
   rt3ctl save inspect --path <save-file> [--json]
+  rt3ctl save diff --path-a <first-save> --path-b <second-save> [--json]
   rt3ctl --help
 
 Environment:
@@ -45,6 +47,7 @@ enum Command {
     MapList(map_cmd::MapList),
     MapTerrain(map_cmd::MapTerrain),
     SaveInspect(save_cmd::SaveInspect),
+    SaveDiff(save_diff::SaveDiff),
     Help,
 }
 
@@ -146,32 +149,61 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
             }
             Some(other) => Err(format!("unknown map subcommand: {other}")),
         },
-        "save" => match it.next().map(String::as_str) {
-            Some("inspect") => {
-                let mut path = None;
-                let mut json = false;
-                while let Some(arg) = it.next() {
-                    match arg.as_str() {
-                        "--path" => {
-                            let value = it
-                                .next()
-                                .filter(|v| !v.starts_with("--"))
-                                .ok_or_else(|| "save inspect: --path needs a value".to_string())?;
-                            path = Some(PathBuf::from(value));
+        "save" => {
+            match it.next().map(String::as_str) {
+                Some("inspect") => {
+                    let mut path = None;
+                    let mut json = false;
+                    while let Some(arg) = it.next() {
+                        match arg.as_str() {
+                            "--path" => {
+                                let value = it.next().filter(|v| !v.starts_with("--")).ok_or_else(
+                                    || "save inspect: --path needs a value".to_string(),
+                                )?;
+                                path = Some(PathBuf::from(value));
+                            }
+                            "--json" => json = true,
+                            other => return Err(format!("save inspect: unknown option {other}")),
                         }
-                        "--json" => json = true,
-                        other => return Err(format!("save inspect: unknown option {other}")),
                     }
+                    let path =
+                        path.ok_or_else(|| "save inspect needs --path <save-file>".to_string())?;
+                    Ok(Command::SaveInspect(save_cmd::SaveInspect { path, json }))
                 }
-                let path =
-                    path.ok_or_else(|| "save inspect needs --path <save-file>".to_string())?;
-                Ok(Command::SaveInspect(save_cmd::SaveInspect { path, json }))
+                Some("diff") => {
+                    let mut left = None;
+                    let mut right = None;
+                    let mut json = false;
+                    while let Some(arg) = it.next() {
+                        match arg.as_str() {
+                            "--path-a" => {
+                                let value = it.next().filter(|v| !v.starts_with("--")).ok_or_else(
+                                    || "save diff: --path-a needs a value".to_string(),
+                                )?;
+                                left = Some(PathBuf::from(value));
+                            }
+                            "--path-b" => {
+                                let value = it.next().filter(|v| !v.starts_with("--")).ok_or_else(
+                                    || "save diff: --path-b needs a value".to_string(),
+                                )?;
+                                right = Some(PathBuf::from(value));
+                            }
+                            "--json" => json = true,
+                            other => return Err(format!("save diff: unknown option {other}")),
+                        }
+                    }
+                    let left =
+                        left.ok_or_else(|| "save diff needs --path-a <save-file>".to_string())?;
+                    let right =
+                        right.ok_or_else(|| "save diff needs --path-b <save-file>".to_string())?;
+                    Ok(Command::SaveDiff(save_diff::SaveDiff { left, right, json }))
+                }
+                Some("--help") | Some("help") | None => {
+                    Err("save needs a subcommand: inspect, diff".to_string())
+                }
+                Some(other) => Err(format!("unknown save subcommand: {other}")),
             }
-            Some("--help") | Some("help") | None => {
-                Err("save needs a subcommand: inspect".to_string())
-            }
-            Some(other) => Err(format!("unknown save subcommand: {other}")),
-        },
+        }
         "typed" => match it.next().map(String::as_str) {
             Some("list") => Ok(Command::TypedList(typed_cmd::parse(it))),
             Some("--help") | Some("help") | None => {
@@ -227,12 +259,32 @@ fn main() -> ExitCode {
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
         Command::SaveInspect(s) => save_cmd::run(s),
+        Command::SaveDiff(s) => save_diff::run(s),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn save_diff_parses_two_paths() {
+        let args = [
+            "save".to_string(),
+            "diff".to_string(),
+            "--path-a".to_string(),
+            "first.gms".to_string(),
+            "--path-b".to_string(),
+            "second.gms".to_string(),
+            "--json".to_string(),
+        ];
+        let Ok(Command::SaveDiff(diff)) = parse_args(&args) else {
+            panic!("save diff arguments must parse");
+        };
+        assert_eq!(diff.left, PathBuf::from("first.gms"));
+        assert_eq!(diff.right, PathBuf::from("second.gms"));
+        assert!(diff.json);
+    }
 
     #[test]
     fn png_option_does_not_consume_another_option_as_filename() {

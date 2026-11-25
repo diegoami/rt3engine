@@ -1,7 +1,7 @@
 # Original save inventories (v1)
 
-Claim level: **structural parse of two original version-9701 saves**, one
-owner-supplied and one independently generated at a controlled state.
+Claim level: **structural parse of three original version-9701 saves**, one
+owner-supplied and two independently generated at controlled states.
 Established 2026-11-24, milestone 4. Implemented as `rt3_kit::save` and
 `rt3ctl save inspect --path <file> [--json]`.
 
@@ -87,8 +87,16 @@ producer `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json`.
 The native save has been privately transferred and parsed. Original-game
 read-back was verified on 2026-11-25 through the reviewed elevated disposable
 launcher: **Single Player → Load Game → Start** returned to British Isles at
-January 1829 with $1,100K. A second controlled save remains open; Save-button
-and Enter attempts after loading did not create a file.
+January 1829 with $1,100K.
+
+## Second independent control and differential
+
+A second fresh-scenario save, `rt3c-bi-1829-02.gms`, was generated independently
+at the same recorded company start. It is 10,315,724 bytes with SHA-256
+`225a98ff8939ae3b4ff5fb6f36cc4b730042017d83f379333d55d783ab0e75b6`.
+`RT3_CONTROL_SAVE_2` names its private fixture. Both actors and founding years
+match the first control; measured section and record differences are documented
+in [controlled-save-diff-v1.md](controlled-save-diff-v1.md).
 
 A copy of the game at `RT3_HOME` is not by itself sufficient to isolate native
 writes: this RT3 installation uses GOG's registry `SAVEGAMEFOLDER`. Future
@@ -108,7 +116,8 @@ basename, dimensions and every collection count above.
 - Save-specific date, company, economy, train/track and campaign fields.
 - Meanings of the retained terrain/tile/blob fields beyond the already
   documented structural layouts.
-- A second controlled save and a differential state walk.
+- Meanings of the measured company/player changed-byte offsets and other
+  save-specific fields beyond the structural differential.
 - Original save *writing* is not claimed.
 
 ## Reproduce
@@ -117,8 +126,10 @@ basename, dimensions and every collection count above.
 export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
 export RT3_SAVE="review-tmp/saves/Central west Pacific 1.gmc"
 export RT3_CONTROL_SAVE="review-tmp/saves/rt3engine-bi-18290101-202.gms"
+export RT3_CONTROL_SAVE_2="review-tmp/saves/rt3c-bi-1829-02.gms"
 cargo test -p rt3-kit save
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_SAVE" --json
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_CONTROL_SAVE" --json
+cargo run -q --release -p rt3ctl -- save diff --path-a "$RT3_CONTROL_SAVE" --path-b "$RT3_CONTROL_SAVE_2" --json
 make evidence-check
 ```

@@ -26,6 +26,7 @@ Checks self-skip without `RT3_HOME` (CI).
 | `terrain-scan-v1.json` | Terrain and sparse-map collections: all 43 shipped maps verified, with exact offsets, dimensions, height statistics and per-map tile/city/building/company/player/event capacities, counts and company founding years | `rt3ctl map terrain --all --json` |
 | `save-inventory-v1.json` | One owner-supplied version-9701 `.gmc` save: identity, source-map basename, framed terrain and tile/city/building/event structural inventory; optional `RT3_SAVE` fixture | `rt3ctl save inspect --path "$RT3_SAVE" --json` |
 | `controlled-save-inventory-v1.json` | One independently generated and read-back-verified version-9701 `.gms` save at a recorded scenario/company start; optional `RT3_CONTROL_SAVE` fixture | `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json` |
+| `controlled-save-diff-v1.json` | Structural section/actor comparison of two independently generated British Isles saves; optional `RT3_CONTROL_SAVE` + `RT3_CONTROL_SAVE_2` fixtures | `rt3ctl save diff --path-a "$RT3_CONTROL_SAVE" --path-b "$RT3_CONTROL_SAVE_2" --json` |
 
 Format findings with method and provenance live beside them:
 [pk4-format-v1.md](pk4-format-v1.md) (PK4 layout; claim level: parse) and
@@ -36,7 +37,8 @@ building/event collections are in
 [gmp-collections-v1.md](gmp-collections-v1.md); company/player collections are
 in [gmp-actors-v1.md](gmp-actors-v1.md).
 Original save inventory findings are in
-[gmc-save-v1.md](gmc-save-v1.md).
+[gmc-save-v1.md](gmc-save-v1.md), with the independent-pair differential in
+[controlled-save-diff-v1.md](controlled-save-diff-v1.md).
 Milestone 3 adds map findings; later milestones add save
 findings, each with its producer command and method note (Ghidra address,
 oracle session, or both).
