@@ -26,3 +26,14 @@ No new findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M5's promise, claims C1–C5, not-in-release list and gate are fixed in
+  `docs/milestones.md` before any engine work: PR #45, merged as `7a8b722`.
+- Independent review rounds: `reviews/34-m5-scope-impl-01.md` (BLOCK) and this
+  file (AGREE).
+- Gates on the change: `make fmt`, `make clippy` and `make test` passed, with
+  the install-backed evidence check clean; CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)
