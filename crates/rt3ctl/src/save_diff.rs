@@ -306,15 +306,15 @@ mod tests {
 
     #[test]
     fn controlled_pair_has_expected_actor_differences() {
-        let (Ok(left), Ok(right)) = (
-            std::env::var("RT3_CONTROL_SAVE"),
-            std::env::var("RT3_CONTROL_SAVE_2"),
+        let (Some(left), Some(right)) = (
+            crate::fixture_path("RT3_CONTROL_SAVE"),
+            crate::fixture_path("RT3_CONTROL_SAVE_2"),
         ) else {
             eprintln!("controlled save pair unset; skipping differential check");
             return;
         };
-        let left = read_save(Path::new(&left)).unwrap();
-        let right = read_save(Path::new(&right)).unwrap();
+        let left = read_save(&left).unwrap();
+        let right = read_save(&right).unwrap();
         let json = render_diff_json(&left, "first.gms", &right, "second.gms").unwrap();
         assert!(json.contains("\"file_bytes_delta\": 30604"));
         assert!(json.contains("\"equal\": true"));
@@ -328,12 +328,12 @@ mod tests {
 
     #[test]
     fn unequal_actor_counts_are_rejected() {
-        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+        let Some(path) = crate::fixture_path("RT3_CONTROL_SAVE") else {
             eprintln!("RT3_CONTROL_SAVE unset; skipping unequal-count check");
             return;
         };
-        let left = read_save(Path::new(&path)).unwrap();
-        let mut right = read_save(Path::new(&path)).unwrap();
+        let left = read_save(&path).unwrap();
+        let mut right = read_save(&path).unwrap();
         right.companies.records.pop();
         assert_eq!(
             validate_actor_counts(&left, &right),

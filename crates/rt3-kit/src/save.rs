@@ -196,9 +196,22 @@ mod tests {
         assert!(from_bytes(&bytes).is_none());
     }
 
+    /// Resolves a fixture named by an environment variable. The evidence docs
+    /// give repository-relative values; those resolve from the repository
+    /// root, not from the crate directory the tests run in.
+    fn fixture(name: &str) -> Option<std::path::PathBuf> {
+        let path = std::path::PathBuf::from(std::env::var_os(name)?);
+        if path.is_absolute() {
+            return Some(path);
+        }
+        let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let candidate = repo.join(&path);
+        Some(if candidate.exists() { candidate } else { path })
+    }
+
     #[test]
     fn reads_original_save() {
-        let Ok(path) = std::env::var("RT3_SAVE") else {
+        let Some(path) = fixture("RT3_SAVE") else {
             eprintln!("RT3_SAVE unset; skipping original-save check");
             return;
         };
@@ -225,7 +238,7 @@ mod tests {
 
     #[test]
     fn reads_independent_control_save() {
-        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+        let Some(path) = fixture("RT3_CONTROL_SAVE") else {
             eprintln!("RT3_CONTROL_SAVE unset; skipping controlled-save check");
             return;
         };
