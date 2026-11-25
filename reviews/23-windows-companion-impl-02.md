@@ -21,3 +21,25 @@ No findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- Companion repository published at
+  [rt3engine-windows](https://github.com/diegoami/rt3engine-windows) with MIT
+  licensing; decision 0004 recorded in
+  `docs/decisions/0004-windows-companion.md` by PR #32, merged as `e920239`.
+- Private Windows output defined by `RT3_PRIVATE_OUT` without WSL or
+  shared-filesystem assumptions; fixtures transfer through `RT3_SAVE`; the
+  original installation stays read-only and no original assets or save bytes
+  enter Git.
+- DirectX warning handling corrected from owner evidence: record and dismiss it
+  with OK, verify a playable game window, and never bypass or alter the device
+  check.
+- Owner-signed confirmation on the pull request
+  ([comment](https://github.com/diegoami/rt3engine/pull/32#issuecomment-7161277622));
+  independent reviews `reviews/23-windows-companion-impl-01.md` (BLOCK) and this
+  file (AGREE).
+- GitHub `check` and GitGuardian Security Checks succeeded on the reviewed
+  revision and the merge; the merge commit's `check` run also succeeded.
+
+— Implementer (zai-coding-plan/glm-5.3)
