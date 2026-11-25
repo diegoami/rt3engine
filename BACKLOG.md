@@ -31,8 +31,7 @@ compensates for absent engine mechanics.
    AGREE): original-save structural loading, two independently generated
    control saves, native read-back, source/company/player fields, a
    section/actor differential, and the native Windows companion decision
-   (0004). Issue #30 is closed; #43 is a non-blocking evidence-prose fix.
-   Milestone 5 has not started.
+   (0004). Issues #30 and #43 are closed. Milestone 5 has not started.
 3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
    remains open (broader web survey, patch-level verification).
 
