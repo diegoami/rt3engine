@@ -7,9 +7,13 @@ use crate::map::GmpMap;
 use crate::terrain::{read_framed, HeightGrid};
 use crate::tiles::TileSections;
 
+const SOURCE_MAP_OFFSET: usize = 0x73d0;
+const SOURCE_MAP_REGION_LEN: usize = 0x7403 - SOURCE_MAP_OFFSET;
+
 pub struct SaveGame {
     pub file_bytes: usize,
     pub sha256: [u8; 32],
+    pub source_map: String,
     pub terrain: HeightGrid,
     pub tiles: TileSections,
     pub cities: CityCollection,
@@ -23,12 +27,31 @@ impl SaveGame {
     }
 }
 
+/// Reads the save-populated source-map basename at the fixed offset observed
+/// in both independent version-9701 fixtures. The 51-byte region ends where
+/// the following display-label field begins in the controlled save.
+fn source_map_name(bytes: &[u8]) -> Option<String> {
+    let field = bytes.get(SOURCE_MAP_OFFSET..SOURCE_MAP_OFFSET + SOURCE_MAP_REGION_LEN)?;
+    let end = field.iter().position(|&byte| byte == 0)?;
+    let name = std::str::from_utf8(&field[..end]).ok()?;
+    if name.is_empty()
+        || !name.to_ascii_lowercase().ends_with(".gmp")
+        || !name.bytes().all(|byte| (0x20..=0x7e).contains(&byte))
+        || name.contains('/')
+        || name.contains('\\')
+    {
+        return None;
+    }
+    Some(name.to_owned())
+}
+
 /// Parses the version-9701 save container and all currently proven
 /// structural collections. Any missing proven section rejects the save.
 pub fn from_bytes(bytes: &[u8]) -> Option<SaveGame> {
     if GmpMap::peek_version(bytes) != Some(9701) {
         return None;
     }
+    let source_map = source_map_name(bytes)?;
     let terrain = read_framed(bytes)?;
     let tiles = crate::tiles::read(bytes, &terrain)?;
     let cities = crate::cities::read(bytes)?;
@@ -37,6 +60,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<SaveGame> {
     Some(SaveGame {
         file_bytes: bytes.len(),
         sha256: sha256(bytes),
+        source_map,
         terrain,
         tiles,
         cities,
@@ -139,6 +163,25 @@ mod tests {
     }
 
     #[test]
+    fn validates_source_map_field() {
+        let mut bytes = vec![0u8; SOURCE_MAP_OFFSET + SOURCE_MAP_REGION_LEN];
+        bytes[SOURCE_MAP_OFFSET..SOURCE_MAP_OFFSET + 17].copy_from_slice(b"British Isles.gmp");
+        assert_eq!(
+            source_map_name(&bytes).as_deref(),
+            Some("British Isles.gmp")
+        );
+
+        bytes[SOURCE_MAP_OFFSET..SOURCE_MAP_OFFSET + 17].copy_from_slice(b"not-a-map.txt\0\0\0\0");
+        assert_eq!(source_map_name(&bytes), None);
+
+        bytes[SOURCE_MAP_OFFSET..SOURCE_MAP_OFFSET + 17].copy_from_slice(b"../ Isles.gmp\0\0\0\0");
+        assert_eq!(source_map_name(&bytes), None);
+
+        bytes.fill(0x20);
+        assert_eq!(source_map_name(&bytes), None);
+    }
+
+    #[test]
     fn rejects_missing_sections() {
         let mut bytes = vec![0u8; 16];
         bytes[..4].copy_from_slice(&9701u32.to_le_bytes());
@@ -154,6 +197,7 @@ mod tests {
         let bytes = fs::read(path).unwrap();
         let save = from_bytes(&bytes).expect("original save");
         assert_eq!(save.file_bytes, 8_490_851);
+        assert_eq!(save.source_map, "Go West!.gmp");
         assert_eq!((save.terrain.rows, save.terrain.cols), (257, 385));
         assert_eq!(save.tiles.records.len(), 6_144);
         assert_eq!(save.cities.records.len(), 59);
@@ -174,6 +218,7 @@ mod tests {
         let bytes = fs::read(path).unwrap();
         let save = from_bytes(&bytes).expect("independent controlled save");
         assert_eq!(save.file_bytes, 10_285_120);
+        assert_eq!(save.source_map, "British Isles.gmp");
         assert_eq!((save.terrain.rows, save.terrain.cols), (513, 321));
         assert_eq!(save.tiles.records.len(), 10_240);
         assert_eq!(save.cities.records.len(), 68);

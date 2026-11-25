@@ -24,8 +24,8 @@ Checks self-skip without `RT3_HOME` (CI).
 | `typed-tables-v1.json` | Typed-data aggregate: 41 cargo, 190 building types, 67 behaviors (99 subrecords, 35 scripts), 66 locomotives, 145 car types, 268 tree rows, 3,868 language strings, engine.cfg 800×600 | `rt3ctl typed list --json` |
 | `maps-inventory-v1.json` | Map inventory: 43 shipped maps (40 version-9701 current, 3 legacy 9609/9610) with text lengths and tail sizes (metadata only) | `rt3ctl map list --json` |
 | `terrain-scan-v1.json` | Terrain and sparse-map collections: all 43 shipped maps verified, with exact offsets, dimensions, height statistics and per-map tile/city/building/event capacities and counts | `rt3ctl map terrain --all --json` |
-| `save-inventory-v1.json` | One owner-supplied version-9701 `.gmc` save: identity, framed terrain and tile/city/building/event structural inventory; optional `RT3_SAVE` fixture | `rt3ctl save inspect --path "$RT3_SAVE" --json` |
-| `controlled-save-inventory-v1.json` | One independently generated version-9701 `.gms` save at a recorded scenario/company start; optional `RT3_CONTROL_SAVE` fixture | `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json` |
+| `save-inventory-v1.json` | One owner-supplied version-9701 `.gmc` save: identity, source-map basename, framed terrain and tile/city/building/event structural inventory; optional `RT3_SAVE` fixture | `rt3ctl save inspect --path "$RT3_SAVE" --json` |
+| `controlled-save-inventory-v1.json` | One independently generated and read-back-verified version-9701 `.gms` save at a recorded scenario/company start; optional `RT3_CONTROL_SAVE` fixture | `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json` |
 
 Format findings with method and provenance live beside them:
 [pk4-format-v1.md](pk4-format-v1.md) (PK4 layout; claim level: parse) and

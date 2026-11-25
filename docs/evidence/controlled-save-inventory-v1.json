@@ -1,6 +1,7 @@
 {
   "file": "rt3engine-bi-18290101-202.gms",
   "version": 9701,
+  "source_map": "British Isles.gmp",
   "file_bytes": 10285120,
   "sha256": "f892bc28ea1fb3bb1ff60f3ed443e82de7818d3fd7a7c26a93e974cfb69ac6bc",
   "terrain": {"grid_offset": 33069, "rows": 513, "cols": 321, "min_height_m": 0.0, "max_height_m": 760.5},
