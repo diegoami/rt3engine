@@ -33,3 +33,15 @@ No new findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- The declared economy lands claim C2's slice: PR #47, merged as `d249919`.
+- Rule table in `docs/evidence/economy-v1.md`; synthetic scenarios committed;
+  identity, bounds, cap and both price clamps, replay, seed divergence and the
+  12-month golden hash are asserted.
+- `cargo test -p engine --test economy` passes 5 tests; `make fmt`,
+  `make clippy` and `make test` are green; CI green.
+- Reviews: `reviews/36-economy-impl-01.md` (BLOCK) and this file (AGREE).
+
+— Implementer (zai-coding-plan/glm-5.3)
