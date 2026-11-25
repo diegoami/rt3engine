@@ -56,3 +56,14 @@ export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
   directory outside it (e.g. `review-tmp/`, gitignored).
 - Evidence regeneration: `make evidence-regen` / `make evidence-check`
   (self-skip without `RT3_HOME`).
+
+## Native Windows companion
+
+Native AutoHotkey, controlled-save and Windows-capture work belongs to
+[rt3engine-windows](https://github.com/diegoami/rt3engine-windows), created by
+owner decision [0004](decisions/0004-windows-companion.md). Use a disposable
+RT3 copy there; export only read-only save fixtures and derived evidence to
+this repository when a private transfer is possible. Pure Windows sessions
+use `RT3_PRIVATE_OUT` and no WSL/shared-filesystem assumption. A DirectX 8.1
+warning may be dismissible; record it, click OK and verify the playable game
+window rather than treating the warning alone as fatal.
