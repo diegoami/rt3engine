@@ -39,10 +39,11 @@ fn synthetic(cities: usize, buildings: usize) -> World {
     }
 }
 
-/// Reads the committed synthetic scenario fixture.
-fn fixture() -> World {
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/economy-scenario.txt");
+/// Reads a committed synthetic scenario fixture.
+fn scenario(name: &str) -> World {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(name);
     let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     let mut cities = 0;
     let mut buildings = 0;
@@ -143,7 +144,7 @@ fn stocks_and_prices_stay_within_bounds() {
 
 #[test]
 fn same_seed_replays_and_a_different_seed_diverges() {
-    let world = fixture();
+    let world = scenario("economy-scenario.txt");
     let run = |seed| {
         let mut economy = Economy::new(&world, ModelRules::default(), seed);
         economy.run_months(12)
@@ -153,8 +154,35 @@ fn same_seed_replays_and_a_different_seed_diverges() {
 }
 
 #[test]
+fn stock_cap_and_price_clamps_are_reached() {
+    let rules = ModelRules {
+        noise_amplitude: 0.0,
+        ..ModelRules::default()
+    };
+    let cap = rules.initial_stock * rules.stock_cap_multiple;
+
+    // 500 buildings on one cargo and no cities: stock reaches the cap within
+    // one month and the price is clamped to the floor.
+    let mut economy = Economy::new(&scenario("economy-cap.txt"), rules, 1);
+    for _ in 0..3 {
+        economy.step_month();
+    }
+    assert_eq!(economy.cargo()[0].stock, cap, "stock cap reached");
+    assert_eq!(economy.cargo()[0].price, 50.0, "price floor applied");
+
+    // No buildings and 10 cities on one cargo: stock reaches zero and the
+    // price is clamped to the ceiling.
+    let mut economy = Economy::new(&scenario("economy-drain.txt"), rules, 1);
+    for _ in 0..3 {
+        economy.step_month();
+    }
+    assert_eq!(economy.cargo()[0].stock, 0.0, "stock floor reached");
+    assert_eq!(economy.cargo()[0].price, 150.0, "price ceiling applied");
+}
+
+#[test]
 fn twelve_month_dump_has_a_stable_hash() {
-    let world = fixture();
+    let world = scenario("economy-scenario.txt");
     let mut economy = Economy::new(&world, ModelRules::default(), 42);
     let dump = economy.run_months(12);
     assert_eq!(

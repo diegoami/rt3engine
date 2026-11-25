@@ -43,7 +43,9 @@ The same world, seed, rules and month count produce byte-identical monthly
 dumps. Cargo is processed in index order and the generator draw order follows
 it, so no hash-map iteration or wall-clock input can change the result. The
 engine tests assert the same-seed replay, a changed-seed divergence, the stock
-identity with noise disabled, bounds over 120 months, and a stable 12-month
+identity with noise disabled, bounds over 120 months, the stock cap and both
+price clamps reached by the committed overproduction and overconsumption
+scenarios (`economy-cap.txt`, `economy-drain.txt`), and a stable 12-month
 golden hash on the committed synthetic scenario
 `crates/engine/tests/fixtures/economy-scenario.txt`.
 

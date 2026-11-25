@@ -1,0 +1,5 @@
+# Synthetic overproduction scenario for claim C2 bounds. Not original data.
+# High production, zero demand: reaches the stock cap and the price floor.
+cities 0
+buildings 500
+cargo Coal 100.0 0.8 0
