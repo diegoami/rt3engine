@@ -28,7 +28,7 @@ pub fn run(command: SaveInspect) -> ExitCode {
     };
     if !command.json {
         println!(
-            "{}: {} bytes, source {}, terrain {}x{}, tiles {}, cities {}, buildings {}, events {}",
+            "{}: {} bytes, source {}, terrain {}x{}, tiles {}, cities {}, buildings {}, companies {}, players {}, events {}",
             command.path.display(),
             save.file_bytes,
             save.source_map,
@@ -37,6 +37,8 @@ pub fn run(command: SaveInspect) -> ExitCode {
             save.tiles.records.len(),
             save.cities.records.len(),
             save.buildings.records.len(),
+            save.companies.records.len(),
+            save.players.records.len(),
             save.events.records.len()
         );
         return ExitCode::SUCCESS;
@@ -80,6 +82,20 @@ pub fn run(command: SaveInspect) -> ExitCode {
         save.buildings.capacity,
         save.buildings.records.len(),
         save.buildings.end_offset
+    );
+    println!(
+        "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        save.companies.section_offset,
+        save.companies.capacity,
+        save.companies.records.len(),
+        save.companies.end_offset
+    );
+    println!(
+        "  \"players\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        save.players.section_offset,
+        save.players.capacity,
+        save.players.records.len(),
+        save.players.end_offset
     );
     println!(
         "  \"events\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}}",

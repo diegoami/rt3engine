@@ -8,8 +8,10 @@ use std::process::ExitCode;
 
 use rt3_kit::buildings;
 use rt3_kit::cities;
+use rt3_kit::companies;
 use rt3_kit::events;
 use rt3_kit::map::GmpMap;
+use rt3_kit::players;
 use rt3_kit::render;
 use rt3_kit::terrain;
 use rt3_kit::tiles;
@@ -295,6 +297,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
         tiles: Option<(usize, usize, usize, usize)>,
         cities: Option<(usize, usize, usize, usize)>,
         buildings: Option<(usize, usize, usize, usize)>,
+        companies: Option<(usize, usize, usize, usize)>,
+        players: Option<(usize, usize, usize, usize)>,
         events: Option<(usize, usize, usize, usize)>,
         status: Option<&'static str>,
         missed: Option<&'static str>,
@@ -310,6 +314,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 tiles: None,
                 cities: None,
                 buildings: None,
+                companies: None,
+                players: None,
                 events: None,
                 status: None,
                 missed: Some("unreadable"),
@@ -341,6 +347,10 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         let buildings = buildings::read(&bytes)
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
+        let companies = companies::read(&bytes)
+            .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
+        let players = players::read(&bytes)
+            .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         let events = events::read(&bytes)
             .map(|c| (c.section_offset, c.capacity, c.records.len(), c.end_offset));
         rows.push(Row {
@@ -350,6 +360,8 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
             tiles,
             cities,
             buildings,
+            companies,
+            players,
             events,
             status,
             missed,
@@ -397,6 +409,18 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 ),
                 None => "null".to_string(),
             };
+            let companies = match &r.companies {
+                Some((off, capacity, records, end)) => format!(
+                    "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}}}"
+                ),
+                None => "null".to_string(),
+            };
+            let players = match &r.players {
+                Some((off, capacity, records, end)) => format!(
+                    "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}}}"
+                ),
+                None => "null".to_string(),
+            };
             let events = match &r.events {
                 Some((off, capacity, records, end)) => format!(
                     "{{\"section_offset\": {off}, \"capacity\": {capacity}, \"records\": {records}, \"end_offset\": {end}}}"
@@ -412,7 +436,7 @@ fn run_terrain_all(root: &std::path::Path, json: bool) -> ExitCode {
                 None => "null".to_string(),
             };
             println!(
-                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"tiles\": {tiles}, \"cities\": {cities}, \"buildings\": {buildings}, \"events\": {events}, \"status\": {status}, \"missed\": {missed}}}{comma}",
+                "    {{\"map\": {}, \"dims\": {dims}, \"grid\": {grid}, \"tiles\": {tiles}, \"cities\": {cities}, \"buildings\": {buildings}, \"companies\": {companies}, \"players\": {players}, \"events\": {events}, \"status\": {status}, \"missed\": {missed}}}{comma}",
                 json_escape(&r.name)
             );
         }
