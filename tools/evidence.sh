@@ -57,7 +57,7 @@ check_doc_totals_file() {
             row_drift=1
         fi
     done <<EOF
-$(grep 'install-inventory-v1.json' "$doc" || true)
+$(grep -F 'install-inventory-v1.json' "$doc" || true)
 EOF
     if [ "$rows" -eq 0 ]; then
         echo "documented totals drift: $doc has no install-inventory-v1.json row" >&2
@@ -95,6 +95,11 @@ selftest_documented_totals() {
     printf '%s\n' 'no install-inventory-v1.json row here' > "$tmp"
     if check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null; then
         echo "documented totals self-test: accepted a missing row" >&2
+        ok=1
+    fi
+    printf '%s\n' '| `install-inventory-v1xjson` | 1,177 files, ~2.03 GB |' > "$tmp"
+    if check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null; then
+        echo "documented totals self-test: accepted a near-miss artifact name" >&2
         ok=1
     fi
     printf '%s\n%s\n' \
