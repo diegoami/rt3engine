@@ -34,8 +34,10 @@ compensates for absent engine mechanics.
    (0004). Issues #30 and #43 are closed. Milestone 5 implementation is
    complete through PR #49 (claims C1–C5); the pre-existing fixture-path defect
    #50 is fixed. Next is the M5 milestone review; milestone 6 has not started.
-3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
-   remains open (broader web survey, patch-level verification).
+3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
+   closed by the 2026-11-25 web/forum survey recorded in
+   [`docs/prior-art.md`](docs/prior-art.md); new candidates are added there as
+   they are found. Issue #8 remains the open map reverse-engineering umbrella.
 
 ## Story contract
 
