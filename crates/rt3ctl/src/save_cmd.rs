@@ -28,9 +28,10 @@ pub fn run(command: SaveInspect) -> ExitCode {
     };
     if !command.json {
         println!(
-            "{}: {} bytes, terrain {}x{}, tiles {}, cities {}, buildings {}, events {}",
+            "{}: {} bytes, source {}, terrain {}x{}, tiles {}, cities {}, buildings {}, events {}",
             command.path.display(),
             save.file_bytes,
+            save.source_map,
             save.terrain.cols,
             save.terrain.rows,
             save.tiles.records.len(),
@@ -49,6 +50,10 @@ pub fn run(command: SaveInspect) -> ExitCode {
     println!("{{");
     println!("  \"file\": {},", crate::map_cmd::json_escape(name));
     println!("  \"version\": 9701,");
+    println!(
+        "  \"source_map\": {},",
+        crate::map_cmd::json_escape(&save.source_map)
+    );
     println!("  \"file_bytes\": {},", save.file_bytes);
     println!(
         "  \"sha256\": {},",

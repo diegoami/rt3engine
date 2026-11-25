@@ -1,6 +1,7 @@
 {
   "file": "Central west Pacific 1.gmc",
   "version": 9701,
+  "source_map": "Go West!.gmp",
   "file_bytes": 8490851,
   "sha256": "3c11cbbdde844273c499086a8a4c23df9e1cfe9837910696fa13bf32d121d99b",
   "terrain": {"grid_offset": 35804, "rows": 257, "cols": 385, "min_height_m": -12.0, "max_height_m": 1821.4},

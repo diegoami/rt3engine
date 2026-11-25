@@ -34,8 +34,20 @@ The exact artifact, including all terminator offsets, is
 `rt3ctl save inspect --path "$RT3_SAVE" --json` and is checked by
 `tools/evidence.sh` whenever `RT3_SAVE` is set.
 
-The filename and terrain dimensions do not establish this save's source map;
-no such inference is made.
+## Source-map field
+
+Both saves contain a NUL-terminated source-map basename at fixed file offset
+`0x73d0`, inside the 51-byte region ending before the following display-label
+field at `0x7403`:
+
+- supplied save: `Go West!.gmp`;
+- controlled save: `British Isles.gmp`, independently confirmed by the native
+  scenario launch and subsequent original-game read-back.
+
+The same offset is empty in the shipped British Isles `.gmp`, so this is a
+save-populated field rather than coincidental scenario prose. The parser
+accepts only a printable ASCII `.gmp` basename without path separators.
+Both JSON artifacts expose it as `source_map`.
 
 ## Independently generated control save
 
@@ -63,8 +75,11 @@ This is an independently generated **`.gms`**, not the previously assumed
 The exact artifact is
 [controlled-save-inventory-v1.json](controlled-save-inventory-v1.json), with
 producer `rt3ctl save inspect --path "$RT3_CONTROL_SAVE" --json`.
-The native save has been privately transferred and parsed; loading it back
-into the original game and a second controlled save remain open.
+The native save has been privately transferred and parsed. Original-game
+read-back was verified on 2026-11-25 through the reviewed elevated disposable
+launcher: **Single Player → Load Game → Start** returned to British Isles at
+January 1829 with $1,100K. A second controlled save remains open; Save-button
+and Enter attempts after loading did not create a file.
 
 A copy of the game at `RT3_HOME` is not by itself sufficient to isolate native
 writes: this RT3 installation uses GOG's registry `SAVEGAMEFOLDER`. Future
@@ -76,16 +91,15 @@ after startup. No save bytes or original assets are committed.
 
 A dependency-free SHA-256 implementation identifies each fixture and has a
 standard `abc` known-vector test. Save parsing rejects other versions and any
-missing proven section. Fixture regressions check file size, hash, dimensions
-and every collection count above.
+missing proven section. Fixture regressions check file size, hash, source-map
+basename, dimensions and every collection count above.
 
 ## Open
 
 - Save-specific date, company, economy, train/track and campaign fields.
 - Meanings of the retained terrain/tile/blob fields beyond the already
   documented structural layouts.
-- Read-back in the original game, a second controlled save, and a differential
-  state walk.
+- A second controlled save and a differential state walk.
 - Original save *writing* is not claimed.
 
 ## Reproduce
