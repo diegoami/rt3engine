@@ -51,7 +51,8 @@ shipped records have scenario-appropriate years: 1830 ×19, 1832 ×1, 1867 ×3,
 liquidated Edinburgh Express and London Rails records retain 1830, while the
 new Great Republic record has 1829, matching the displayed January 1829 state.
 Per-record `founded_years` arrays are retained in both all-map and save JSON
-artifacts. Other company fields remain open.
+artifacts. Save JSON also includes validated `names` arrays for companies and
+players, in record order. Other company fields remain open.
 
 All **43 shipped maps** parse both collections: 40 version-9701 maps plus the
 three legacy 9609/9610 maps. Totals are **37 company records** and **145 player

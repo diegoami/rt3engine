@@ -83,6 +83,24 @@ pub fn run(command: SaveInspect) -> ExitCode {
         save.buildings.records.len(),
         save.buildings.end_offset
     );
+    let (Some(company_names), Some(player_names)) = (
+        save.companies
+            .records
+            .iter()
+            .map(rt3_kit::companies::name)
+            .collect::<Option<Vec<_>>>(),
+        save.players
+            .records
+            .iter()
+            .map(rt3_kit::players::name)
+            .collect::<Option<Vec<_>>>(),
+    ) else {
+        eprintln!(
+            "rt3ctl: {}: invalid company/player name field",
+            command.path.display()
+        );
+        return ExitCode::from(1);
+    };
     let founded_years = save
         .companies
         .records
@@ -90,19 +108,21 @@ pub fn run(command: SaveInspect) -> ExitCode {
         .map(|record| rt3_kit::companies::founded_year(record).unwrap())
         .collect::<Vec<_>>();
     println!(
-        "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"founded_years\": {:?}}},",
+        "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"founded_years\": {:?}, \"names\": {}}},",
         save.companies.section_offset,
         save.companies.capacity,
         save.companies.records.len(),
         save.companies.end_offset,
-        founded_years
+        founded_years,
+        json_strings(&company_names)
     );
     println!(
-        "  \"players\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        "  \"players\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"names\": {}}},",
         save.players.section_offset,
         save.players.capacity,
         save.players.records.len(),
-        save.players.end_offset
+        save.players.end_offset,
+        json_strings(&player_names)
     );
     println!(
         "  \"events\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}}",
@@ -110,4 +130,15 @@ pub fn run(command: SaveInspect) -> ExitCode {
     );
     println!("}}");
     ExitCode::SUCCESS
+}
+
+fn json_strings(values: &[&str]) -> String {
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(|value| crate::map_cmd::json_escape(value))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
