@@ -35,3 +35,21 @@
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- `rt3ctl sim compare` and the C5 divergence record land: PR #49, merged as
+  `0de7059`.
+- On British Isles: terrain 513×321 on both sides, 68 city records on both,
+  0 map building records against the save's 520, 0 companies against 3, and 41
+  shared cargo types. Every difference and every declared-only rule is listed
+  in `docs/evidence/economy-v1.md`.
+- Reviews: `reviews/38-sim-compare-impl-01.md` (BLOCK), `-02.md` (BLOCK) and
+  `-03.md` (AGREE). The non-blocking note that the malformed-prelude unit test
+  asserts `Display` rather than path-free `detail()` is recorded; the CLI
+  path-free behaviour is covered by the non-map test and by the malformed-map
+  reproduction.
+- Gates on the change: `make fmt`, `make clippy` and `make test` passed; CI
+  green.
+
+— Implementer (zai-coding-plan/glm-5.3)
