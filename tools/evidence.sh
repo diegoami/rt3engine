@@ -40,8 +40,35 @@ documented_total_line_matches() {
         awk -v a="$line_gb" -v b="$want_gb" 'BEGIN { exit (a == b ? 0 : 1) }'
 }
 
-# selftest_documented_totals guards the matcher against accepting a stale total
-# that only contains the expected one as a substring; it runs with the check.
+# check_doc_totals_file DOC FILES GB — every row in DOC that names the install
+# artifact must state exactly these totals; a missing row is drift too, so a
+# stale duplicate row cannot hide behind a correct one.
+check_doc_totals_file() {
+    doc=$1
+    want_files=$2
+    want_gb=$3
+    rows=0
+    row_drift=0
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        rows=$((rows + 1))
+        if ! documented_total_line_matches "$line" "$want_files" "$want_gb"; then
+            echo "documented totals drift: $doc row does not state $want_files files and ~$want_gb GB: $line" >&2
+            row_drift=1
+        fi
+    done <<EOF
+$(grep 'install-inventory-v1.json' "$doc" || true)
+EOF
+    if [ "$rows" -eq 0 ]; then
+        echo "documented totals drift: $doc has no install-inventory-v1.json row" >&2
+        row_drift=1
+    fi
+    return "$row_drift"
+}
+
+# selftest_documented_totals guards the matcher and the row walk against stale
+# totals: a value that only contains the expected one, and a stale duplicate
+# row behind a correct one, must both be rejected. It runs with the check.
 selftest_documented_totals() {
     ok=0
     documented_total_line_matches 'Aggregate installation inventory: 1,177 files, ~2.03 GB;' 1177 2.03 || ok=1
@@ -57,6 +84,24 @@ selftest_documented_totals() {
         echo "documented totals self-test: accepted a stale file count" >&2
         ok=1
     fi
+    tmp=$(mktemp "${TMPDIR:-/tmp}/evidence-totals.XXXXXX") || return 2
+    printf '%s\n%s\n' \
+        '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' \
+        '| `install-inventory-v1.json` | 11,177 files, ~2.03 GB |' > "$tmp"
+    if check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null; then
+        echo "documented totals self-test: accepted a stale duplicate row" >&2
+        ok=1
+    fi
+    printf '%s\n' 'no install-inventory-v1.json row here' > "$tmp"
+    if check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null; then
+        echo "documented totals self-test: accepted a missing row" >&2
+        ok=1
+    fi
+    printf '%s\n%s\n' \
+        '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' \
+        '| `install-inventory-v1.json` | 1,177 files, ~2.03 GB |' > "$tmp"
+    check_doc_totals_file "$tmp" 1177 2.03 2>/dev/null || ok=1
+    rm -f "$tmp"
     [ "$ok" -eq 0 ] || echo "documented totals self-test failed" >&2
     return "$ok"
 }
@@ -82,16 +127,7 @@ check_documented_totals() {
     gb=$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1000000000 }')
     drift=0
     for doc in docs/evidence/README.md docs/environment.md; do
-        line=$(grep -m1 'install-inventory-v1.json' "$doc" || true)
-        if [ -z "$line" ]; then
-            echo "documented totals drift: $doc has no install-inventory-v1.json row" >&2
-            drift=1
-            continue
-        fi
-        if ! documented_total_line_matches "$line" "$files" "$gb"; then
-            echo "documented totals drift: $doc does not state $files files and ~$gb GB on its install-inventory-v1.json row" >&2
-            drift=1
-        fi
+        check_doc_totals_file "$doc" "$files" "$gb" || drift=1
     done
     return "$drift"
 }
