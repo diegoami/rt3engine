@@ -1,10 +1,11 @@
 //! `rt3ctl save inspect` — read-only original `.gmc`/`.gms` inventory.
 
+use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use rt3_kit::save;
+use rt3_kit::save::{self, SaveGame};
 
 pub struct SaveInspect {
     pub path: PathBuf,
@@ -48,41 +49,19 @@ pub fn run(command: SaveInspect) -> ExitCode {
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("save.gmc");
-    let (lo, hi) = save.terrain.height_range().unwrap_or((0.0, 0.0));
-    println!("{{");
-    println!("  \"file\": {},", crate::map_cmd::json_escape(name));
-    println!("  \"version\": 9701,");
-    println!(
-        "  \"source_map\": {},",
-        crate::map_cmd::json_escape(&save.source_map)
-    );
-    println!("  \"file_bytes\": {},", save.file_bytes);
-    println!(
-        "  \"sha256\": {},",
-        crate::map_cmd::json_escape(&save.sha256_hex())
-    );
-    println!(
-        "  \"terrain\": {{\"grid_offset\": {}, \"rows\": {}, \"cols\": {}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}},",
-        save.terrain.offset, save.terrain.rows, save.terrain.cols
-    );
-    println!(
-        "  \"tiles\": {{\"section_offset\": {}, \"records\": {}, \"dynamic_entries\": {}, \"end_offset\": {}}},",
-        save.tiles.section_offset,
-        save.tiles.records.len(),
-        save.tiles.dynamic_entries(),
-        save.tiles.end_offset
-    );
-    println!(
-        "  \"cities\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
-        save.cities.section_offset, save.cities.capacity, save.cities.records.len(), save.cities.end_offset
-    );
-    println!(
-        "  \"buildings\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
-        save.buildings.section_offset,
-        save.buildings.capacity,
-        save.buildings.records.len(),
-        save.buildings.end_offset
-    );
+    match render_json(&save, name) {
+        Ok(json) => {
+            print!("{json}");
+            ExitCode::SUCCESS
+        }
+        Err(detail) => {
+            eprintln!("rt3ctl: {}: {detail}", command.path.display());
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn render_json(save: &SaveGame, name: &str) -> Result<String, &'static str> {
     let (Some(company_names), Some(player_names)) = (
         save.companies
             .records
@@ -95,11 +74,7 @@ pub fn run(command: SaveInspect) -> ExitCode {
             .map(rt3_kit::players::name)
             .collect::<Option<Vec<_>>>(),
     ) else {
-        eprintln!(
-            "rt3ctl: {}: invalid company/player name field",
-            command.path.display()
-        );
-        return ExitCode::from(1);
+        return Err("invalid company/player name field");
     };
     let founded_years = save
         .companies
@@ -107,7 +82,56 @@ pub fn run(command: SaveInspect) -> ExitCode {
         .iter()
         .map(|record| rt3_kit::companies::founded_year(record).unwrap())
         .collect::<Vec<_>>();
-    println!(
+    let (lo, hi) = save.terrain.height_range().unwrap_or((0.0, 0.0));
+    let mut out = String::new();
+    writeln!(out, "{{").unwrap();
+    writeln!(out, "  \"file\": {},", crate::map_cmd::json_escape(name)).unwrap();
+    writeln!(out, "  \"version\": 9701,").unwrap();
+    writeln!(
+        out,
+        "  \"source_map\": {},",
+        crate::map_cmd::json_escape(&save.source_map)
+    )
+    .unwrap();
+    writeln!(out, "  \"file_bytes\": {},", save.file_bytes).unwrap();
+    writeln!(
+        out,
+        "  \"sha256\": {},",
+        crate::map_cmd::json_escape(&save.sha256_hex())
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"terrain\": {{\"grid_offset\": {}, \"rows\": {}, \"cols\": {}, \"min_height_m\": {lo:.1}, \"max_height_m\": {hi:.1}}},",
+        save.terrain.offset, save.terrain.rows, save.terrain.cols
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"tiles\": {{\"section_offset\": {}, \"records\": {}, \"dynamic_entries\": {}, \"end_offset\": {}}},",
+        save.tiles.section_offset,
+        save.tiles.records.len(),
+        save.tiles.dynamic_entries(),
+        save.tiles.end_offset
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"cities\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        save.cities.section_offset, save.cities.capacity, save.cities.records.len(), save.cities.end_offset
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"buildings\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}},",
+        save.buildings.section_offset,
+        save.buildings.capacity,
+        save.buildings.records.len(),
+        save.buildings.end_offset
+    )
+    .unwrap();
+    writeln!(
+        out,
         "  \"companies\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"founded_years\": {:?}, \"names\": {}}},",
         save.companies.section_offset,
         save.companies.capacity,
@@ -115,21 +139,26 @@ pub fn run(command: SaveInspect) -> ExitCode {
         save.companies.end_offset,
         founded_years,
         json_strings(&company_names)
-    );
-    println!(
+    )
+    .unwrap();
+    writeln!(
+        out,
         "  \"players\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"names\": {}}},",
         save.players.section_offset,
         save.players.capacity,
         save.players.records.len(),
         save.players.end_offset,
         json_strings(&player_names)
-    );
-    println!(
+    )
+    .unwrap();
+    writeln!(
+        out,
         "  \"events\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}}",
         save.events.section_offset, save.events.capacity, save.events.records.len(), save.events.end_offset
-    );
-    println!("}}");
-    ExitCode::SUCCESS
+    )
+    .unwrap();
+    writeln!(out, "}}").unwrap();
+    Ok(out)
 }
 
 fn json_strings(values: &[&str]) -> String {
@@ -141,4 +170,38 @@ fn json_strings(values: &[&str]) -> String {
             .collect::<Vec<_>>()
             .join(", ")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_json_includes_actor_names() {
+        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+            eprintln!("RT3_CONTROL_SAVE unset; skipping JSON actor check");
+            return;
+        };
+        let bytes = fs::read(path).unwrap();
+        let save = save::from_bytes(&bytes).unwrap();
+        let json = render_json(&save, "control.gms").unwrap();
+        assert!(json.contains("Great Republic"));
+        assert!(json.contains("George Hudson"));
+        assert!(json.ends_with("}\n"));
+    }
+
+    #[test]
+    fn invalid_actor_name_is_an_error_not_json() {
+        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+            eprintln!("RT3_CONTROL_SAVE unset; skipping invalid-name JSON check");
+            return;
+        };
+        let bytes = fs::read(path).unwrap();
+        let mut save = save::from_bytes(&bytes).unwrap();
+        save.companies.records[2].data[4] = 0xff;
+        assert_eq!(
+            render_json(&save, "control.gms"),
+            Err("invalid company/player name field")
+        );
+    }
 }
