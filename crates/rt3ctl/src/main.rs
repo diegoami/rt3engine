@@ -34,6 +34,7 @@ Usage:
   rt3ctl map list [--path <install-root>] [--json]
   rt3ctl map terrain <name> [--path <install-root>] [--png <output.png>]
   rt3ctl sim inspect <map> [--path <install-root>] [--json]
+  rt3ctl sim run <map> [--seed <n>] [--months <n>] [--ticks-per-month <n>] [--dump <file>] [--path <install-root>]
   rt3ctl save inspect --path <save-file> [--json]
   rt3ctl save diff --path-a <first-save> --path-b <second-save> [--json]
   rt3ctl --help
@@ -49,6 +50,7 @@ enum Command {
     MapList(map_cmd::MapList),
     MapTerrain(map_cmd::MapTerrain),
     SimInspect(sim_cmd::SimInspect),
+    SimRun(sim_cmd::SimRun),
     SaveInspect(save_cmd::SaveInspect),
     SaveDiff(save_diff::SaveDiff),
     Help,
@@ -154,8 +156,9 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
         },
         "sim" => match it.next().map(String::as_str) {
             Some("inspect") => Ok(Command::SimInspect(sim_cmd::parse(it)?)),
+            Some("run") => Ok(Command::SimRun(sim_cmd::parse_run(it)?)),
             Some("--help") | Some("help") | None => {
-                Err("sim needs a subcommand: inspect <map>".to_string())
+                Err("sim needs a subcommand: inspect <map>, run <map>".to_string())
             }
             Some(other) => Err(format!("unknown sim subcommand: {other}")),
         },
@@ -269,6 +272,7 @@ fn main() -> ExitCode {
         Command::MapList(list) => map_cmd::run(list),
         Command::MapTerrain(t) => map_cmd::run_terrain(t),
         Command::SimInspect(i) => sim_cmd::run(i),
+        Command::SimRun(r) => sim_cmd::run_simulation(r),
         Command::SaveInspect(s) => save_cmd::run(s),
         Command::SaveDiff(s) => save_diff::run(s),
     }

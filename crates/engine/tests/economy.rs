@@ -106,12 +106,20 @@ fn stock_identity_holds_without_noise() {
     let mut economy = Economy::new(&world, rules, 1);
     let line = economy.step_month();
 
-    // Buildings 0 and 2 produce Coal (2 × 10); building 1 produces Grain
-    // (1 × 10). Each of the 2 cities consumes 5 of every cargo.
+    // Building 0 and 2 produce Coal, building 1 produces Grain (1 unit each).
+    // Each of the 2 cities consumes 0.04 of every cargo.
     let coal = &economy.cargo()[0];
     let grain = &economy.cargo()[1];
-    assert_eq!(coal.stock, 1_000.0 + 20.0 - 10.0, "coal stock identity");
-    assert_eq!(grain.stock, 1_000.0 + 10.0 - 10.0, "grain stock identity");
+    assert!(
+        (coal.stock - (10_000.0 + 2.0 - 0.08)).abs() < 1e-9,
+        "coal stock identity: {}",
+        coal.stock
+    );
+    assert!(
+        (grain.stock - (10_000.0 + 1.0 - 0.08)).abs() < 1e-9,
+        "grain stock identity: {}",
+        grain.stock
+    );
     assert!(line.contains("\"month\":1"), "dump line: {line}");
     assert!(line.contains("\"name\":\"Coal\""), "dump line: {line}");
 }
@@ -161,19 +169,19 @@ fn stock_cap_and_price_clamps_are_reached() {
     };
     let cap = rules.initial_stock * rules.stock_cap_multiple;
 
-    // 500 buildings on one cargo and no cities: stock reaches the cap within
-    // one month and the price is clamped to the floor.
+    // 500 buildings on one cargo and no cities: stock reaches the cap and the
+    // price is clamped to the floor.
     let mut economy = Economy::new(&scenario("economy-cap.txt"), rules, 1);
-    for _ in 0..3 {
+    for _ in 0..12 {
         economy.step_month();
     }
     assert_eq!(economy.cargo()[0].stock, cap, "stock cap reached");
     assert_eq!(economy.cargo()[0].price, 50.0, "price floor applied");
 
-    // No buildings and 10 cities on one cargo: stock reaches zero and the
-    // price is clamped to the ceiling.
+    // No buildings and extreme demand on one cargo: stock reaches zero and
+    // the price is clamped to the ceiling.
     let mut economy = Economy::new(&scenario("economy-drain.txt"), rules, 1);
-    for _ in 0..3 {
+    for _ in 0..2 {
         economy.step_month();
     }
     assert_eq!(economy.cargo()[0].stock, 0.0, "stock floor reached");
@@ -187,6 +195,6 @@ fn twelve_month_dump_has_a_stable_hash() {
     let dump = economy.run_months(12);
     assert_eq!(
         hex(dump.as_bytes()),
-        "aebe7267b327db3ed1b0be96425d5b8f2909c6f78b021cff6df50123a8c0a322"
+        "9c6d4d97b1ce71e996b67ccc9403cb11bb02e1d613d73ace0d5601de300a1b8c"
     );
 }

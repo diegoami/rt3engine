@@ -62,10 +62,10 @@ impl Default for ModelRules {
     fn default() -> Self {
         ModelRules {
             ticks_per_month: 30,
-            initial_stock: 1_000.0,
+            initial_stock: 10_000.0,
             stock_cap_multiple: 10.0,
-            production_per_building: 10.0,
-            demand_per_city: 5.0,
+            production_per_building: 1.0,
+            demand_per_city: 0.04,
             noise_amplitude: 2.0,
             min_price_factor: 0.5,
             max_price_factor: 1.5,
