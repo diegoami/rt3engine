@@ -21,6 +21,21 @@ installation reachable through the Windows mount.
   `Language/RT3.lng` (INI-like text), `GrayscaleMaps/*.TGA`, `maps/*.gmp`,
   mp3 music/voice, no user saves yet. Aggregate inventory:
   [evidence v1](evidence/install-inventory-v1.json) — 1,177 files, ~2.03 GB.
+- Executable identity and patch level (2026-11-25): `RT3.exe` is PE32,
+  2,330,624 bytes, SHA-256
+  `accb099b0d8ebac8b50c539a5cc91a863bc9ae399ae70da382ff1c22301e38a2`;
+  `d8tx.dll` is 73,728 bytes, SHA-256
+  `2b48ca33982fe78729fec134596d062ed1595019c77d80e729569f79d4fdcc5b`.
+  Patch level is recorded as **1.05 by inference**, not from an independent
+  executable-build check: the bundled `History.rtf` ends at "Version 1.05
+  Changes", and the 40 current maps carry the version word 9701 (`0x25E5`),
+  the community-documented 1.05 map mark (1.06 maps use 9901, `0x26AD`; the
+  three legacy maps carry 9609/9610). The PE version resource is not diagnostic
+  (FileVersion `1`, ProductVersion `0, 2, 0, 1`), and no independent build
+  identifier has been matched to the hashes above, so a 1.06 executable cannot
+  be excluded from this evidence alone. Version-9901 originals are rejected by
+  the current parser; that is a statement about parser scope, not about which
+  patch built this executable.
 
 ## Toolchain
 
