@@ -26,6 +26,41 @@ fi
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 2
 cd "$repo_root" || exit 2
 
+# documented_total_line_matches LINE FILES GB — true when LINE states exactly
+# these totals: the whole file count and the whole two-decimal GB size, not a
+# value that merely contains them as a substring.
+documented_total_line_matches() {
+    line=$1
+    want_files=$2
+    want_gb=$3
+    line_files=$(printf '%s\n' "$line" | tr -d ',' | grep -Eo '[0-9]+ files' | awk '{ print $1; exit }')
+    line_gb=$(printf '%s\n' "$line" | grep -Eo '[0-9]+\.[0-9]+ GB' | awk '{ print $1; exit }')
+    [ -n "$line_files" ] && [ -n "$line_gb" ] &&
+        [ "$line_files" = "$want_files" ] &&
+        awk -v a="$line_gb" -v b="$want_gb" 'BEGIN { exit (a == b ? 0 : 1) }'
+}
+
+# selftest_documented_totals guards the matcher against accepting a stale total
+# that only contains the expected one as a substring; it runs with the check.
+selftest_documented_totals() {
+    ok=0
+    documented_total_line_matches 'Aggregate installation inventory: 1,177 files, ~2.03 GB;' 1177 2.03 || ok=1
+    if documented_total_line_matches 'Aggregate installation inventory: 11,177 files, ~2.03 GB;' 1177 2.03; then
+        echo "documented totals self-test: accepted a stale file count" >&2
+        ok=1
+    fi
+    if documented_total_line_matches 'Aggregate installation inventory: 1,177 files, ~12.03 GB;' 1177 2.03; then
+        echo "documented totals self-test: accepted a stale size" >&2
+        ok=1
+    fi
+    if documented_total_line_matches 'Aggregate installation inventory: 1,176 files, ~2.03 GB;' 1177 2.03; then
+        echo "documented totals self-test: accepted a stale file count" >&2
+        ok=1
+    fi
+    [ "$ok" -eq 0 ] || echo "documented totals self-test failed" >&2
+    return "$ok"
+}
+
 # check_documented_totals verifies the install totals that the evidence README
 # and the environment doc state in prose against the committed artifact, so a
 # refreshed inventory cannot leave a stale number behind. It needs no
@@ -47,12 +82,14 @@ check_documented_totals() {
     gb=$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1000000000 }')
     drift=0
     for doc in docs/evidence/README.md docs/environment.md; do
-        if ! tr -d ',' < "$doc" | grep -q "$files files"; then
-            echo "documented totals drift: $doc does not state $files files" >&2
+        line=$(grep -m1 'install-inventory-v1.json' "$doc" || true)
+        if [ -z "$line" ]; then
+            echo "documented totals drift: $doc has no install-inventory-v1.json row" >&2
             drift=1
+            continue
         fi
-        if ! tr -d ',' < "$doc" | grep -q "$gb GB"; then
-            echo "documented totals drift: $doc does not state ~$gb GB" >&2
+        if ! documented_total_line_matches "$line" "$files" "$gb"; then
+            echo "documented totals drift: $doc does not state $files files and ~$gb GB on its install-inventory-v1.json row" >&2
             drift=1
         fi
     done
@@ -60,6 +97,7 @@ check_documented_totals() {
 }
 
 if [ "$mode" = "check" ]; then
+    selftest_documented_totals || exit $?
     check_documented_totals || exit $?
 fi
 
