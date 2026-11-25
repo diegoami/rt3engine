@@ -26,6 +26,51 @@ gate — including owner acceptance where named — plus the release process in
 | 14 | **Enhanced playing package** | Opt-in QoL: overlays (cargo flow, profitability), schedule aids, presentation/settings, recording/annotations | Owner acceptance; faithful defaults preserved |
 | 15+ | **Authoring and beyond** | Map/scenario inspection → lint/dry-run → editing; AI plugins/tournaments; original-fidelity program | scoped per package when opened |
 
+## Milestone 5 — headless economy kernel (scope fixed 2026-11-25)
+
+**Promise:** a headless economy kernel over loaded original maps — a fixed-tick,
+seeded simulation of cities, placed industries and cargo supply, demand and
+prices, with monthly dumps, deterministic replay, and divergence from
+measurable original state documented.
+
+Claims, each naming the check that proves it:
+
+- **C1 — Map-grounded world.** The kernel loads two shipped maps with their
+  cities, placed industry buildings, cargo catalogue and terrain, reporting
+  counts identical to the structural parsers. Check: `cargo test -p engine`
+  with `RT3_HOME` on `British Isles.gmp` and `California Island.gmp`, asserting
+  the loaded city and building counts against `rt3-kit`'s collections.
+- **C2 — Fixed-tick supply, demand and prices.** One simulated month is a
+  declared tick count; each tick applies documented production, consumption and
+  price rules, with the stock accounting identity and documented bounds
+  asserted. Check: engine unit tests on a committed synthetic scenario for the
+  identity, bounds and a golden monthly dump hash, plus the rule table in
+  `docs/evidence/economy-v1.md`.
+- **C3 — Seeded determinism.** The same map, seed, configuration and tick count
+  produce byte-identical monthly dumps, and a different seed changes them.
+  Check: the engine golden-hash replay test and `rt3ctl sim run` twice on a
+  shipped map compared by SHA-256.
+- **C4 — Multi-year runs on two maps.** `rt3ctl sim run` completes at least one
+  in-game decade on two shipped maps, emitting one JSON line per month and an
+  explicit stop reason. Check: install-backed integration runs on both maps with
+  the dump schema validated and the stop reason asserted.
+- **C5 — Measurable divergence documented.** The kernel's British Isles start
+  state is compared with the controlled original save at January 1829 (city
+  collection, placed building/industry collection, cargo catalogue); every
+  difference, and every economy rule without original-constant provenance, is
+  listed in `docs/evidence/economy-v1.md`. Check: `rt3ctl sim compare`
+  reproduces the comparison, and the evidence doc enumerates each divergence
+  with its cause.
+
+**Not in this release:** track and trains, stations and schedules (milestone
+6); player or AI company operations, company finance beyond a starting
+balance, stock market, bonds and maintenance; campaign objectives; observer,
+client and MCP surfaces; original save writing; bit-exact original fidelity;
+original economy constants that reverse engineering has not recovered.
+
+**Gate:** C1–C5 met on the candidate, including the deterministic multi-year
+run on two maps and the documented divergence.
+
 ## Selection and completion rules
 
 1. Work proceeds milestone by milestone in the order above unless the owner
