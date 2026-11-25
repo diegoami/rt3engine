@@ -1,8 +1,9 @@
 //! Install-backed check for claim C1: a map-grounded world loads the
-//! structural records and the cargo catalogue. Values are the committed
-//! `docs/evidence/terrain-scan-v1.json` and `typed-tables-v1.json` figures;
-//! the test fails if the loaders drift from them.
+//! structural records and the cargo catalogue. Terrain and cargo figures are
+//! read from the committed evidence artifacts; city and building counts are
+//! compared with `rt3-kit`'s own collections on the same bytes.
 
+use std::fs;
 use std::path::PathBuf;
 
 use engine::world;
@@ -10,51 +11,75 @@ use engine::world;
 struct Case {
     dir: &'static str,
     file: &'static str,
-    rows: usize,
-    cols: usize,
-    min_height_m: f32,
-    max_height_m: f32,
-    cities: usize,
-    buildings: usize,
 }
 
 const CASES: [Case; 3] = [
     Case {
         dir: "maps",
         file: "British Isles.gmp",
-        rows: 513,
-        cols: 321,
-        min_height_m: 0.0,
-        max_height_m: 760.5,
-        cities: 68,
-        buildings: 0,
     },
     Case {
         dir: "maps",
         file: "California Island.gmp",
-        rows: 257,
-        cols: 257,
-        min_height_m: -454.0,
-        max_height_m: 3051.1,
-        cities: 46,
-        buildings: 0,
     },
     // A current map with placed building records, so the building path is
     // exercised with a non-zero collection too.
     Case {
         dir: "maps",
         file: "Greenland Growing.gmp",
-        rows: 193,
-        cols: 257,
-        min_height_m: -130.1,
-        max_height_m: 1177.5,
-        cities: 42,
-        buildings: 54,
     },
 ];
 
 fn home() -> Option<PathBuf> {
     std::env::var_os("RT3_HOME").map(PathBuf::from)
+}
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+fn number_after(text: &str, key: &str) -> f64 {
+    let start = text
+        .find(key)
+        .unwrap_or_else(|| panic!("missing {key} in evidence"))
+        + key.len();
+    let rest = text[start..].trim_start();
+    let end = rest
+        .find(|c: char| !(c.is_ascii_digit() || c == '-' || c == '.'))
+        .unwrap_or(rest.len());
+    rest[..end]
+        .parse()
+        .unwrap_or_else(|_| panic!("bad number after {key}"))
+}
+
+/// The `terrain-scan-v1.json` row for one map, as
+/// (rows, cols, min height, max height).
+fn terrain_artifact(name: &str) -> (usize, usize, f64, f64) {
+    let text = fs::read_to_string(repo_root().join("docs/evidence/terrain-scan-v1.json"))
+        .expect("terrain artifact");
+    let marker = format!("\"map\": \"{name}\"");
+    let start = text
+        .find(&marker)
+        .unwrap_or_else(|| panic!("no {name} row"));
+    let rest = &text[start..];
+    let end = rest[1..]
+        .find("\"map\": ")
+        .map(|offset| offset + 1)
+        .unwrap_or(rest.len());
+    let row = &rest[..end];
+    (
+        number_after(row, "\"rows\":") as usize,
+        number_after(row, "\"cols\":") as usize,
+        number_after(row, "\"min_height_m\":"),
+        number_after(row, "\"max_height_m\":"),
+    )
+}
+
+fn cargo_artifact_count() -> usize {
+    let text = fs::read_to_string(repo_root().join("docs/evidence/typed-tables-v1.json"))
+        .expect("typed artifact");
+    let start = text.find("\"cargo_types\"").expect("cargo_types");
+    number_after(&text[start..], "\"files\":") as usize
 }
 
 #[test]
@@ -63,41 +88,52 @@ fn loads_map_grounded_world() {
         eprintln!("RT3_HOME unset; skipping install-backed world check");
         return;
     };
+    let cargo_types = cargo_artifact_count();
     for case in CASES {
         let path = home.join(case.dir).join(case.file);
+        let bytes = fs::read(&path).unwrap();
+        let name = case.file.trim_end_matches(".gmp");
+        let (rows, cols, min_expected, max_expected) = terrain_artifact(name);
+        let cities = rt3_kit::cities::read(&bytes).expect("city collection");
+        let buildings = rt3_kit::buildings::read(&bytes).expect("building collection");
+
         let world = world::load(&path, &home).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
-        assert_eq!(
-            world.map_name,
-            case.file.trim_end_matches(".gmp"),
-            "map name for {}",
-            case.file
-        );
+        assert_eq!(world.map_name, name, "map name for {}", case.file);
         assert_eq!(
             (world.terrain.rows, world.terrain.cols),
-            (case.rows, case.cols),
-            "terrain dimensions for {}",
+            (rows, cols),
+            "terrain dimensions for {} against terrain-scan-v1.json",
             case.file
         );
         let (min, max) = world.terrain.height_range().expect("height range");
         assert!(
-            (min - case.min_height_m).abs() < 0.06,
-            "{} min height {min} != {}",
-            case.file,
-            case.min_height_m
-        );
-        assert!(
-            (max - case.max_height_m).abs() < 0.06,
-            "{} max height {max} != {}",
-            case.file,
-            case.max_height_m
-        );
-        assert_eq!(world.city_records, case.cities, "cities for {}", case.file);
-        assert_eq!(
-            world.building_records, case.buildings,
-            "buildings for {}",
+            ((min as f64) - min_expected).abs() < 0.06,
+            "{} min height {min} != {min_expected}",
             case.file
         );
-        assert_eq!(world.cargo.len(), 41, "cargo types for {}", case.file);
+        assert!(
+            ((max as f64) - max_expected).abs() < 0.06,
+            "{} max height {max} != {max_expected}",
+            case.file
+        );
+        assert_eq!(
+            world.city_records,
+            cities.records.len(),
+            "cities for {} against rt3-kit",
+            case.file
+        );
+        assert_eq!(
+            world.building_records,
+            buildings.records.len(),
+            "buildings for {} against rt3-kit",
+            case.file
+        );
+        assert_eq!(
+            world.cargo.len(),
+            cargo_types,
+            "cargo types for {} against typed-tables-v1.json",
+            case.file
+        );
         assert!(
             world.cargo.iter().any(|t| t.name == "Alcohol"),
             "named cargo type for {}",
