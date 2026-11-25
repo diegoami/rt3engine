@@ -196,17 +196,19 @@ mod tests {
         assert!(from_bytes(&bytes).is_none());
     }
 
-    /// Resolves a fixture named by an environment variable. The evidence docs
-    /// give repository-relative values; those resolve from the repository
-    /// root, not from the crate directory the tests run in.
+    /// Resolves a fixture named by an environment variable. A relative value
+    /// is always taken from the repository root, as the evidence docs give it,
+    /// never from the crate directory the tests run in.
     fn fixture(name: &str) -> Option<std::path::PathBuf> {
         let path = std::path::PathBuf::from(std::env::var_os(name)?);
         if path.is_absolute() {
             return Some(path);
         }
-        let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let candidate = repo.join(&path);
-        Some(if candidate.exists() { candidate } else { path })
+        Some(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join(path),
+        )
     }
 
     #[test]
