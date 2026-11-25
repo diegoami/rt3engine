@@ -33,6 +33,10 @@ pub fn run(command: SaveDiff) -> ExitCode {
     };
     let left_name = file_name(&command.left);
     let right_name = file_name(&command.right);
+    if let Err(detail) = validate_actor_counts(&left, &right) {
+        eprintln!("rt3ctl: {detail}");
+        return ExitCode::from(1);
+    }
     if !command.json {
         let companies = changed_records(&left.companies.records, &right.companies.records);
         let players = changed_records(&left.players.records, &right.players.records);
@@ -81,6 +85,15 @@ fn delta(right: usize, left: usize) -> i64 {
     right as i64 - left as i64
 }
 
+fn validate_actor_counts(left: &SaveGame, right: &SaveGame) -> Result<(), &'static str> {
+    if left.companies.records.len() != right.companies.records.len()
+        || left.players.records.len() != right.players.records.len()
+    {
+        return Err("actor record counts differ");
+    }
+    Ok(())
+}
+
 fn changed_records(left: &[FixedBlobRecord], right: &[FixedBlobRecord]) -> usize {
     left.iter()
         .zip(right)
@@ -94,6 +107,7 @@ fn render_diff_json(
     right: &SaveGame,
     right_name: &str,
 ) -> Result<String, &'static str> {
+    validate_actor_counts(left, right)?;
     let company_changes = actor_changes(
         &left.companies.records,
         &right.companies.records,
@@ -310,5 +324,21 @@ mod tests {
         assert!(json.contains("\"identical_records\": 2, \"different_records\": 1"));
         assert!(json.contains("\"identical_records\": 1, \"different_records\": 2"));
         assert!(!json.contains("}},"));
+    }
+
+    #[test]
+    fn unequal_actor_counts_are_rejected() {
+        let Ok(path) = std::env::var("RT3_CONTROL_SAVE") else {
+            eprintln!("RT3_CONTROL_SAVE unset; skipping unequal-count check");
+            return;
+        };
+        let left = read_save(Path::new(&path)).unwrap();
+        let mut right = read_save(Path::new(&path)).unwrap();
+        right.companies.records.pop();
+        assert_eq!(
+            validate_actor_counts(&left, &right),
+            Err("actor record counts differ")
+        );
+        assert!(render_diff_json(&left, "first.gms", &right, "second.gms").is_err());
     }
 }
