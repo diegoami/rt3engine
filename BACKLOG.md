@@ -27,15 +27,13 @@ compensates for absent engine mechanics.
 1. Milestone 0 (bootstrap) and milestone 1 (PK4 archives, PR #4, merge
    `ab827b5`) are complete; issues #1/#2 closed by evidence.
 2. Milestones 1–3b are landed (PK4, typed data, map prelude + inventory,
-   terrain decode/render). **Milestone 4 implementation is complete through PR
-   #40**: original-save structural loading, two independently generated control
-   saves, native read-back, source/company/player fields, and a section/actor
-   differential. Issue #30 is closed. Next: the owner launches the M4 milestone
-   review; milestone 5 has not started.
-3. [PR #32](https://github.com/diegoami/rt3engine/pull/32) remains open for the
-   native Windows companion decision. Its only blocker is the owner-signed
-   confirmation comment required by the delegated-merge decision protocol.
-4. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
+   terrain decode/render). **Milestone 4 implementation is complete through PRs
+   #41 and #32**: original-save structural loading, two independently generated
+   control saves, native read-back, source/company/player fields, a
+   section/actor differential, and the native Windows companion decision
+   (0004). Issue #30 is closed. Next: the M4 milestone review; milestone 5 has
+   not started.
+3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
    remains open (broader web survey, patch-level verification).
 
 ## Story contract
