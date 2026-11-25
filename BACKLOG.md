@@ -26,11 +26,16 @@ compensates for absent engine mechanics.
 
 1. Milestone 0 (bootstrap) and milestone 1 (PK4 archives, PR #4, merge
    `ab827b5`) are complete; issues #1/#2 closed by evidence.
-2. Milestones 1–3 are landed (PK4, typed data, map prelude + inventory).
-   Current: **milestone 3b — terrain decode and render** (issues #8/#9):
-   static RE plus the Wine oracle for dynamic calibration (owner decision
-   2026-11-23; Wine installation is an owner action).
-3. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
+2. Milestones 1–3b are landed (PK4, typed data, map prelude + inventory,
+   terrain decode/render). **Milestone 4 implementation is complete through PR
+   #40**: original-save structural loading, two independently generated control
+   saves, native read-back, source/company/player fields, and a section/actor
+   differential. Issue #30 is closed. Next: the owner launches the M4 milestone
+   review; milestone 5 has not started.
+3. [PR #32](https://github.com/diegoami/rt3engine/pull/32) remains open for the
+   native Windows companion decision. Its only blocker is the owner-signed
+   confirmation comment required by the delegated-merge decision protocol.
+4. Prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3)
    remains open (broader web survey, patch-level verification).
 
 ## Story contract
@@ -55,5 +60,6 @@ a deterministic run is not a fidelity claim.
 
 - Labels: `p0` urgent, `p1` next-candidate, `p2` later; `re` for
   reverse-engineering findings; `qol` for enhancement packages.
-- The owner merges every pull request; the owner launches milestone reviews.
+- Ordinary changes merge on independent AGREE per decision 0002; the owner
+  launches milestone reviews, tags and human-acceptance gates.
 - No calendar estimates; versions attach when scope freezes.
