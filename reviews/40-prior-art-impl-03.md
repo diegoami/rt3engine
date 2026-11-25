@@ -30,3 +30,16 @@ No findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- The broader prior-art survey and the executable identity record land: PR #53,
+  merged as `943be5f`; issue #3 is closed.
+- New community candidates are recorded with scope, license and verdict; every
+  one is reference-only, and no code, binary or asset is adopted.
+- `RT3.exe` and `d8tx.dll` are pinned by hash; the patch level is recorded as
+  1.05 by inference with its limits, and a 1.06 executable is not excluded.
+- Reviews: `reviews/40-prior-art-impl-01.md` (BLOCK), `-02.md` (BLOCK),
+  `-03.md` (AGREE). Gates and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)
