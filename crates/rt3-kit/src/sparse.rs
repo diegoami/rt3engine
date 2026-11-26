@@ -147,6 +147,135 @@ mod tests {
         out.extend_from_slice(&value.to_le_bytes());
     }
 
+    /// Header and level table for a collection with `capacity` slots and no
+    /// level payload blocks.
+    fn collection_without_payloads(spec: Spec, capacity: u32, active: u32) -> Vec<u8> {
+        let mut bytes = vec![0u8; 0x3000];
+        push_u32(&mut bytes, spec.outer);
+        push_u32(&mut bytes, spec.inner);
+        if let Some(preamble) = spec.preamble {
+            push_u32(&mut bytes, preamble);
+        }
+        // Header: fixed words, capacity, active count, trailing zero.
+        for word in [0, 6, 10, 20, capacity, active, 0] {
+            push_u32(&mut bytes, word);
+        }
+        for level in 0..4 {
+            push_u32(&mut bytes, u32::from(level == 0));
+            push_u32(&mut bytes, 0);
+            push_u32(&mut bytes, 0);
+        }
+        bytes
+    }
+
+    fn sample_spec() -> Spec {
+        Spec {
+            outer: 0x32dc,
+            inner: 0x4e99,
+            end: 0x4e9a,
+            preamble: Some(1001),
+            blob_bytes: 4,
+        }
+    }
+
+    /// One collection with a preamble, an active level-2 payload block, a
+    /// one-byte mask and two active records in slots 1 and 3.
+    fn sample_with_preamble() -> (Spec, Vec<u8>, usize) {
+        let spec = sample_spec();
+        let mut bytes = collection_without_payloads(spec, 4, 2);
+        let base = 0x3000;
+        let level2 = bytes.len() - 48 + 2 * 12;
+        bytes[level2..level2 + 4].copy_from_slice(&1u32.to_le_bytes());
+        bytes.resize(bytes.len() + 4 * 12, 0); // level-2 payload: capacity × 12
+        bytes.push(0b101); // bits set mark absent; slots 1 and 3 are active
+        for value in [0x11u8, 0x33] {
+            bytes.extend_from_slice(&[value; 6]);
+            bytes.extend_from_slice(&4u16.to_le_bytes());
+            bytes.extend_from_slice(&[value; 4]);
+        }
+        push_u32(&mut bytes, spec.end);
+        (spec, bytes, base)
+    }
+
+    #[test]
+    fn rejects_truncated_and_malformed_sparse_collections() {
+        let (spec, bytes, base) = sample_with_preamble();
+        let collection = read(&bytes, spec).expect("sample collection");
+        assert_eq!(collection.capacity, 4);
+        assert_eq!(collection.records.len(), 2);
+        assert_eq!(collection.records[0].slot, 1);
+        assert_eq!(collection.records[1].slot, 3);
+
+        for end in 0..bytes.len() {
+            assert!(read(&bytes[..end], spec).is_none(), "accepted prefix {end}");
+        }
+
+        // Offsets into `sample_with_preamble`: header at base+12, levels at
+        // base+40, level-2 payload at base+88, mask at base+136.
+        let wrong_words: [(&str, usize, u32); 6] = [
+            ("outer tag", base, 0x32dd),
+            ("inner tag", base + 4, 0x4e98),
+            ("preamble", base + 8, 1002),
+            ("level 0 flag", base + 40, 0),
+            ("level 2 flag", base + 64, 2),
+            ("terminator", bytes.len() - 4, 0),
+        ];
+        for (what, at, value) in wrong_words {
+            let mut broken = bytes.clone();
+            broken[at..at + 4].copy_from_slice(&value.to_le_bytes());
+            assert!(read(&broken, spec).is_none(), "accepted wrong {what}");
+        }
+    }
+
+    #[test]
+    fn rejects_bad_counts_wrong_blob_length_and_oversized_capacity() {
+        let spec = sample_spec();
+
+        // All four mask bits set: every slot absent, the terminator immediately
+        // after the mask, while the header still declares two active records.
+        // Only the final record-count check can reject this buffer.
+        let mut under_count = collection_without_payloads(spec, 4, 2);
+        under_count.push(0x0f);
+        push_u32(&mut under_count, spec.end);
+        assert!(
+            read(&under_count, spec).is_none(),
+            "accepted a mask with fewer records than declared"
+        );
+
+        // One active slot declaring five payload bytes while the spec wants
+        // four; the five bytes exist, so only the length check rejects it.
+        let mut wrong_length = collection_without_payloads(spec, 1, 1);
+        wrong_length.push(0x00); // bit clear: slot 0 active
+        wrong_length.extend_from_slice(&[0x44; 6]);
+        wrong_length.extend_from_slice(&5u16.to_le_bytes());
+        wrong_length.extend_from_slice(&[0x44; 5]);
+        push_u32(&mut wrong_length, spec.end);
+        assert!(
+            read(&wrong_length, spec).is_none(),
+            "accepted a five-byte blob"
+        );
+
+        // One slot over MAX_SLOTS with a complete mask of absent slots: the
+        // slot limit must fire before the 129 mask bytes are considered.
+        let mut oversized = collection_without_payloads(spec, 1025, 0);
+        oversized.resize(oversized.len() + 129, 0xff);
+        push_u32(&mut oversized, spec.end);
+        assert!(
+            read(&oversized, spec).is_none(),
+            "accepted capacity over the slot limit"
+        );
+
+        // Active above capacity is rejected, but the final record count also
+        // rejects it; this is regression coverage, not an isolated guard.
+        let mut active_over = collection_without_payloads(spec, 4, 5);
+        active_over.push(0x0f);
+        push_u32(&mut active_over, spec.end);
+        assert!(
+            read(&active_over, spec).is_none(),
+            "accepted more active records than slots"
+        );
+    }
+
     #[test]
     fn exact_eight_capacity_allocates_two_mask_bytes() {
         let spec = Spec {

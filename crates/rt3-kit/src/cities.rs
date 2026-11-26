@@ -169,7 +169,7 @@ mod tests {
             .unwrap()
             .starts_with(b"Cork"));
         for end in 0..bytes.len() {
-            let _ = read(&bytes[..end]);
+            assert!(read(&bytes[..end]).is_none(), "accepted city prefix {end}");
         }
         let mut bad_active = bytes.clone();
         bad_active[0x301c..0x3020].copy_from_slice(&3u32.to_le_bytes());

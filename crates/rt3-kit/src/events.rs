@@ -64,6 +64,9 @@ mod tests {
         assert!(name_bytes(&collection.records[0])
             .unwrap()
             .starts_with(b"SP - TEST"));
+        for end in 0..bytes.len() {
+            assert!(read(&bytes[..end]).is_none(), "accepted event prefix {end}");
+        }
     }
 
     #[test]
