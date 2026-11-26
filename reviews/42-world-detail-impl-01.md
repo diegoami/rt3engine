@@ -22,3 +22,16 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- `rejects_malformed_prelude_despite_intact_sections` now asserts the parser
+  reason through `WorldError::detail()` and that the detail excludes the
+  temporary map path; the path-leaking `Display` is no longer the assertion.
+- Demonstrated: wrapping the parser error with `MapError`'s `Display` makes the
+  test fail at the path-leak assertion; the production code is unchanged.
+- PR #57 merged as `9dd6b4c`; issue #56 is closed. Gates green on the reviewed
+  revision; the world tests ran without skips, and CI `check` run 45856662554
+  succeeded.
+
+— Implementer (zai-coding-plan/glm-5.3)
