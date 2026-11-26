@@ -33,7 +33,9 @@ compensates for absent engine mechanics.
    section/actor differential, and the native Windows companion decision
    (0004). Issues #30 and #43 are closed. Milestone 5 implementation is
    complete through PR #49 (claims C1–C5); the pre-existing fixture-path defect
-   #50 is fixed. Next is the M5 milestone review; milestone 6 has not started.
+   #50 is fixed, and the deferred sparse-collection rejection follow-up #54 is
+   closed by PR #55. Next is the M5 milestone review; milestone 6 has not
+   started.
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in
    [`docs/prior-art.md`](docs/prior-art.md); new candidates are added there as

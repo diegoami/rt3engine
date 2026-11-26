@@ -63,3 +63,20 @@ No new findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- Negative tests now assert rejection for every strict prefix of the city and
+  event collections, and for wrong tags, preamble, level flags, terminator,
+  record count, blob length and slot capacity in the shared sparse reader.
+- Each isolatable guard was shown to fail when removed (rows A–I in the pull
+  request); the active-over-capacity bound is recorded as regression coverage
+  because the record count rejects the same buffer.
+- Shipped-map totals are unchanged: 4,130/3,726 cities, 2,450/2,044 buildings,
+  1,810/1,169 events; the install-backed tests ran and skipped nothing.
+- PR #55 merged as `f87b1c9`; issue #54 is closed. Gates green on the reviewed
+  revision, CI `check` run 45854909910 succeeded.
+- Reviews: `reviews/41-sparse-rejection-impl-01.md` (BLOCK),
+  `-02.md` (AGREE).
+
+— Implementer (zai-coding-plan/glm-5.3)
