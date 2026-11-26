@@ -147,6 +147,88 @@ mod tests {
         out.extend_from_slice(&value.to_le_bytes());
     }
 
+    /// One collection with a preamble, an active level-2 payload block, a
+    /// two-byte mask gap and two active records in slots 1 and 3.
+    fn sample_with_preamble() -> (Spec, Vec<u8>, usize) {
+        let spec = Spec {
+            outer: 0x32dc,
+            inner: 0x4e99,
+            end: 0x4e9a,
+            preamble: Some(1001),
+            blob_bytes: 4,
+        };
+        let mut bytes = vec![0u8; 0x3000];
+        let base = bytes.len();
+        push_u32(&mut bytes, spec.outer);
+        push_u32(&mut bytes, spec.inner);
+        push_u32(&mut bytes, 1001);
+        // Header: fixed words, capacity 4, two active records, trailing zero.
+        for word in [0, 6, 10, 20, 4, 2, 0] {
+            push_u32(&mut bytes, word);
+        }
+        for level in 0..4 {
+            push_u32(&mut bytes, u32::from(level == 0 || level == 2));
+            push_u32(&mut bytes, 0);
+            push_u32(&mut bytes, 0);
+        }
+        bytes.resize(bytes.len() + 4 * 12, 0); // level-2 payload: capacity × 12
+        bytes.push(0b101); // slots 1 and 3 active
+        for value in [0x11u8, 0x33] {
+            bytes.extend_from_slice(&[value; 6]);
+            bytes.extend_from_slice(&4u16.to_le_bytes());
+            bytes.extend_from_slice(&[value; 4]);
+        }
+        push_u32(&mut bytes, spec.end);
+        (spec, bytes, base)
+    }
+
+    #[test]
+    fn rejects_truncated_and_malformed_sparse_collections() {
+        let (spec, bytes, base) = sample_with_preamble();
+        let collection = read(&bytes, spec).expect("sample collection");
+        assert_eq!(collection.capacity, 4);
+        assert_eq!(collection.records.len(), 2);
+        assert_eq!(collection.records[0].slot, 1);
+        assert_eq!(collection.records[1].slot, 3);
+
+        for end in 0..bytes.len() {
+            assert!(read(&bytes[..end], spec).is_none(), "accepted prefix {end}");
+        }
+
+        // Offsets into `sample_with_preamble`: header at base+12, levels at
+        // base+40, level-2 payload at base+88, mask at base+136, first
+        // record's length at base+143.
+        let wrong_words: [(&str, usize, u32); 8] = [
+            ("outer tag", base, 0x32dd),
+            ("inner tag", base + 4, 0x4e98),
+            ("preamble", base + 8, 1002),
+            ("capacity over the slot limit", base + 28, 1025),
+            ("more active records than slots", base + 32, 5),
+            ("level 0 flag", base + 40, 0),
+            ("level 2 flag", base + 64, 2),
+            ("terminator", bytes.len() - 4, 0),
+        ];
+        for (what, at, value) in wrong_words {
+            let mut broken = bytes.clone();
+            broken[at..at + 4].copy_from_slice(&value.to_le_bytes());
+            assert!(read(&broken, spec).is_none(), "accepted wrong {what}");
+        }
+
+        let mut no_active = bytes.clone();
+        no_active[base + 136] = 0; // the mask declares no records; two are counted
+        assert!(
+            read(&no_active, spec).is_none(),
+            "accepted a mask with fewer records than declared"
+        );
+
+        let mut short_blob = bytes.clone();
+        short_blob[base + 143..base + 145].copy_from_slice(&5u16.to_le_bytes());
+        assert!(
+            read(&short_blob, spec).is_none(),
+            "accepted a five-byte blob"
+        );
+    }
+
     #[test]
     fn exact_eight_capacity_allocates_two_mask_bytes() {
         let spec = Spec {
