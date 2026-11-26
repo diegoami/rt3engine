@@ -182,12 +182,15 @@ fn rejects_malformed_prelude_despite_intact_sections() {
     ));
     fs::write(&path, &bytes).unwrap();
     let error = world::load_map(&path).expect_err("malformed prelude must be rejected");
+    let detail = error.detail().to_string();
     fs::remove_file(&path).ok();
     assert!(
-        error
-            .to_string()
-            .contains("not a supported version-9701 map"),
-        "unexpected error: {error}"
+        detail.contains("not a supported version-9701 map"),
+        "unexpected error: {detail}"
+    );
+    assert!(
+        !detail.contains(&path.display().to_string()),
+        "error detail leaks the file path: {detail}"
     );
 }
 
