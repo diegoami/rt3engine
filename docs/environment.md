@@ -45,7 +45,7 @@ installation reachable through the Windows mount.
 | GNU make | 4.4.1 at `~/tools/bin/make` (extracted Ubuntu package; no system make on this box). Put `~/tools/bin` on `PATH` |
 | Ghidra | 12.2 at `~/tools/ghidra_12.2_PUBLIC`; run headless via the wrapper `~/tools/bin/ghidra-headless` (sets `JAVA_HOME`) |
 | JDK | Ghidra 12.2 requires JDK **25**: `~/tools/jdk-25.0.5.1+2` (wrapper sets it; JDK 21 at `~/tools/jdk-21.0.13.1+2` is spare) |
-| Wine | **Not installed.** Needed from milestone 4 (oracle). System install requires owner `sudo`; no passwordless sudo on this box |
+| Wine | 9.0 (`wine-9.0`, Ubuntu package). The oracle runs on a copy of the installation at `C:\RT3` in the prefix `~/tools/wine-rt3`; the GOG install stays untouched. Launcher `tools/oracle/launch.sh` (DXVK x32 d3d8/d3d9 on lavapipe, binkw32 disabled, Wine virtual desktop, GLX-capable Xvfb under a renamed binary). Take the capture lock below before any oracle boot |
 | Python | 3.12.3 (helper scripts only; stdlib) |
 
 Installations live in `~/tools` (user-space; `sudo apt` requires the owner).
