@@ -41,8 +41,9 @@ compensates for absent engine mechanics.
    Milestone 6 is open by the owner's call (2026-11-27); its scope is fixed in
    `docs/milestones.md` (claims C1–C6 including the AI competitor v0). C1, the
    declared track graph, is landed (PR #65), C2, declared consist movement
-   over it, is landed (PR #66), and C3, stations/consists/schedules, is landed
-   (PR #67); C4 is next. The rail field decode remains open in
+   over it, is landed (PR #66), C3, stations/consists/schedules, is landed
+   (PR #67), and C4, headless orders with an order log and checkpoints, is
+   landed (PR #68); C5 is next. The rail field decode remains open in
    [#62](https://github.com/diegoami/rt3engine/issues/62).
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in

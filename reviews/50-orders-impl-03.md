@@ -28,3 +28,15 @@ Verification: `make fmt`, `make clippy`, `make test` and `make evidence-check` p
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M6 C4 lands: `engine::orders` and the `rt3ctl sim` order commands record
+  build-track, buy-train and assign-schedule orders in a JSONL log, advance
+  JSON checkpoints, and replay from any checkpoint with every recorded state
+  hash checked. The canonical state text is collision-free and hashed once.
+- PR #68 merged as `d74a882`. C5–C6 are not started; no version is assigned.
+- Reviews: `reviews/50-orders-impl-01.md` (BLOCK), `-02.md` (BLOCK),
+  `-03.md` (AGREE). Gates and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)
