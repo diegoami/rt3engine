@@ -7,10 +7,12 @@
 //!
 //! The model: one tick is one second; a consist accelerates at a constant
 //! rate toward a cruise speed, brakes when the remaining path is inside the
-//! stopping distance, and stops at the end of the path. Distances are decoded
-//! track-world units. There is **no randomness** in the model — replaying the
-//! same path for the same number of ticks produces byte-identical state — so
-//! a seed does not exist to change.
+//! stopping distance, and stops at the end of the path. A scheduled run can
+//! pass an intermediate limit, where the same rule brings the consist to rest
+//! for a station stop (`crate::schedule`). Distances are decoded track-world
+//! units. There is **no randomness** in the model — replaying the same path
+//! for the same number of ticks produces byte-identical state — so a seed does
+//! not exist to change.
 
 use rt3_kit::rail::TrackGraph;
 
@@ -159,12 +161,24 @@ impl Movement {
         }
     }
 
-    /// Advances the declared model by one tick.
+    /// Advances the declared model by one tick, braking to a stop at the path
+    /// end.
     pub fn step(&mut self) {
-        if self.stopped {
+        self.step_until(self.path.length());
+    }
+
+    /// Advances one tick, braking to a declared stop at `limit`.
+    ///
+    /// `limit` is clamped to the path; a limit before the current distance
+    /// does not move the consist backwards. Reaching the path end sets
+    /// [`Movement::stopped`]; reaching an intermediate limit only brings the
+    /// consist to rest, so a schedule can dwell and depart again.
+    pub fn step_until(&mut self, limit: f64) {
+        if self.stopped || !limit.is_finite() {
             return;
         }
-        let remaining = self.path.length() - self.distance;
+        let limit = limit.clamp(self.distance, self.path.length());
+        let remaining = limit - self.distance;
         let braking = self.speed * self.speed / (2.0 * ACCELERATION);
         let target = if remaining <= braking { 0.0 } else { MAX_SPEED };
         self.speed = if target > self.speed {
@@ -173,11 +187,18 @@ impl Movement {
             (self.speed - ACCELERATION * TICK_SECONDS).max(0.0)
         };
         self.distance += self.speed * TICK_SECONDS;
-        if self.distance >= self.path.length() {
-            self.distance = self.path.length();
+        if self.distance >= limit {
+            self.distance = limit;
             self.speed = 0.0;
-            self.stopped = true;
+            if self.distance >= self.path.length() {
+                self.stopped = true;
+            }
         }
+        self.tick += 1;
+    }
+
+    /// Advances the clock with the consist at rest (a station dwell).
+    pub fn wait(&mut self) {
         self.tick += 1;
     }
 
