@@ -20,3 +20,16 @@ No findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- Every `sim compare` divergence branch is asserted: the two unconditional
+  notes in the British Isles pair, and all seven divergences in a cross-map
+  pair (California Island against the British Isles save) that reaches the
+  terrain, city-count and source-map branches.
+- Each previously unasserted branch was shown to fail the test when removed;
+  the building and company assertions still catch their removals.
+- PR #60 merged as `02b4060`; issue #59 is closed. Gates green on the reviewed
+  revision and CI `check` succeeded.
+
+— Implementer (zai-coding-plan/glm-5.3)

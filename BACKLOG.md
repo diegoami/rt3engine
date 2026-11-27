@@ -35,7 +35,10 @@ compensates for absent engine mechanics.
    complete through PR #49 (claims C1–C5); the pre-existing fixture-path defect
    #50 is fixed, and the deferred sparse-collection rejection follow-up #54 is
    closed by PR #55. The malformed-prelude detail assertion #56 is closed by
-   PR #57. Next is the M5 milestone review; milestone 6 has not started.
+   PR #57, and the v0.6.0 reviewer's non-blocking comparison-coverage finding
+   #59 is closed by PR #60. **Milestone 5 is released as `v0.6.0`** (issue
+   #51, AGREE by MiniMax-M3): the headless economy kernel over loaded maps.
+   Milestone 6 has not started.
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in
    [`docs/prior-art.md`](docs/prior-art.md); new candidates are added there as
