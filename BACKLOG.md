@@ -40,9 +40,10 @@ compensates for absent engine mechanics.
    #51, AGREE by MiniMax-M3): the headless economy kernel over loaded maps.
    Milestone 6 is open by the owner's call (2026-11-27); its scope is fixed in
    `docs/milestones.md` (claims C1–C6 including the AI competitor v0). C1, the
-   declared track graph, is landed (PR #65), and C2, declared consist movement
-   over it, is landed (PR #66); C3 is next. The rail field decode remains open
-   in [#62](https://github.com/diegoami/rt3engine/issues/62).
+   declared track graph, is landed (PR #65), C2, declared consist movement
+   over it, is landed (PR #66), and C3, stations/consists/schedules, is landed
+   (PR #67); C4 is next. The rail field decode remains open in
+   [#62](https://github.com/diegoami/rt3engine/issues/62).
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in
    [`docs/prior-art.md`](docs/prior-art.md); new candidates are added there as

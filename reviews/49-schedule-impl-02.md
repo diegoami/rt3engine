@@ -35,3 +35,16 @@ No remaining findings.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M6 C3 lands: `engine::schedule` assembles a consist from typed catalogue
+  records, builds a validated schedule between two station-DB records and runs
+  it as ordered stops with declared dwell, arrival/departure records and a
+  golden dump. On the private fixture Bath departs at tick 5 and Gloucester is
+  reached at tick 196.
+- PR #67 merged as `3d2a06b`. C4–C6 are not started; no version is assigned.
+- Reviews: `reviews/49-schedule-impl-01.md` (BLOCK),
+  `-02.md` (AGREE). Gates and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)
