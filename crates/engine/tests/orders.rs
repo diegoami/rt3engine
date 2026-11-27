@@ -87,6 +87,22 @@ fn validate_rejects_schedule_endpoints_that_do_not_match_the_track() {
 }
 
 #[test]
+fn validate_rejects_a_consist_with_empty_names() {
+    let mut state = OrderState::new(stations(2));
+    state.consist = Some(engine::schedule::Consist {
+        locomotive: String::new(),
+        cars: Vec::new(),
+    });
+    assert!(state.validate().is_err());
+
+    state.consist = Some(engine::schedule::Consist {
+        locomotive: "PlanetL".to_string(),
+        cars: vec!["Car".to_string(), String::new()],
+    });
+    assert!(state.validate().is_err());
+}
+
+#[test]
 fn validate_rejects_duplicate_station_slots() {
     let state = OrderState::new(vec![
         Station {

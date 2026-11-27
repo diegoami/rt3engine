@@ -197,10 +197,11 @@ impl OrderState {
         Ok(())
     }
 
-    /// Checks the state invariants a checkpoint must satisfy: unique non-empty
-    /// station labels, a track whose endpoints are existing distinct station
-    /// slots, and a schedule that references existing slots and matches the
-    /// track endpoints.
+    /// Checks the state invariants a checkpoint must satisfy: non-empty
+    /// station labels, unique station slots, a consist with non-empty names, a
+    /// track whose endpoints are existing distinct station slots, and a
+    /// schedule that references existing slots and matches the track
+    /// endpoints.
     pub fn validate(&self) -> Result<(), String> {
         if self.stations.is_empty() {
             return Err("state has no station references".into());
@@ -233,6 +234,14 @@ impl OrderState {
             }
             if !track.path.length().is_finite() || track.path.length() <= 0.0 {
                 return Err("track path has no length".into());
+            }
+        }
+        if let Some(consist) = &self.consist {
+            if !clean_name(&consist.locomotive) {
+                return Err("locomotive name is empty or has a control character".into());
+            }
+            if consist.cars.iter().any(|car| !clean_name(car)) {
+                return Err("car name is empty or has a control character".into());
             }
         }
         if let Some(schedule) = &self.schedule {

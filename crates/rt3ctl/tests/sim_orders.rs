@@ -502,6 +502,61 @@ fn replay_rejects_a_checkpoint_with_an_impossible_track() {
 }
 
 #[test]
+fn replay_rejects_a_checkpoint_with_an_order_impossible_consist() {
+    let root = dir("bad-consist");
+    let checkpoint = root.join("checkpoint.json");
+    let log = root.join("orders.jsonl");
+    fs::write(&log, b"").expect("empty log");
+
+    let state = OrderState {
+        stations: vec![Station {
+            slot: 0,
+            label: "Bath".to_string(),
+        }],
+        track: None,
+        consist: Some(engine::schedule::Consist {
+            locomotive: String::new(),
+            cars: Vec::new(),
+        }),
+        schedule: None,
+    };
+    let value = serde_json::json!({
+        "version": 1,
+        "seq": 0,
+        "log_sha256": hex(&sha256(b"")),
+        "state_sha256": hex(&state.state_digest()),
+        "state": {
+            "stations": [[0, "Bath"]],
+            "track": null,
+            "consist": {"locomotive": "", "cars": []},
+            "schedule": null,
+        },
+    });
+    fs::write(&checkpoint, format!("{value}\n")).expect("checkpoint");
+
+    let replay = ctl(&[
+        "sim",
+        "replay",
+        "--checkpoint",
+        &path_string(&checkpoint),
+        "--log",
+        &path_string(&log),
+        "--json",
+    ]);
+    assert!(
+        !replay.status.success(),
+        "a checkpoint with an empty locomotive must be rejected"
+    );
+    assert!(
+        String::from_utf8_lossy(&replay.stderr).contains("locomotive name"),
+        "unexpected error: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn stations_come_from_the_populated_fixture_when_supplied() {
     let Some(path) = std::env::var_os("RT3_TRACK_SAVE").map(PathBuf::from) else {
         eprintln!("RT3_TRACK_SAVE unset; skipping fixture-backed order check");

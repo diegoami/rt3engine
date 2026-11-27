@@ -65,10 +65,11 @@ identical output and the same final hash.
 ## Fixture result
 
 The populated fixture's station section supplies 3 references; slots 0 and 1
-are declared Bath and Gloucester, slot 2 is declared Tower. Building a
-2,054.776-unit track between slots 0 and 1 and assigning the `PlanetL` consist
-reaches final hash
-`3e63bacf4bff67423bdf7235319f2c9ae6675dd860b26e0b1343f79d114d08b5`. The
+are declared Bath and Gloucester, slot 2 is declared Tower. With the C3
+fixture consist (`PlanetL` plus the first four typed car display names
+`242 A1`, `242 A1`, `2-D-2`, `E-88`) and the default 5-tick origin dwell,
+building a 2,054.776-unit track between slots 0 and 1 reaches final hash
+`c53351cdb88921370785c32a2b9857f718c5147f15a3c9c3739cb0e5f463f857`. The
 built path's measured length is `2054.77587890625` under f32 piece origins,
 not the decoded C2 path length; the declared geometry is not the original
 track.
@@ -82,9 +83,11 @@ track.
 - File writes are not transactional: a failure between the log and checkpoint
   writes leaves the pair inconsistent and the next command detects it through
   the log hash.
-- A checkpoint is rejected unless its state re-validates: unique non-empty
-  station labels, track endpoints that exist and differ, and schedule stops
-  that reference existing stations and match the track endpoints.
+- A checkpoint is rejected unless its state re-validates: non-empty station
+  labels with unique slots, non-empty consist names, track endpoints that
+  exist and differ, and schedule stops that reference existing stations and
+  match the track endpoints. Duplicate station labels are allowed; the slot is
+  the identity.
 - No economy, company or AI state is part of the order checkpoint.
 
 ## Reproduce
