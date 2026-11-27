@@ -33,7 +33,7 @@ by a declared index convention and must not be read as game behaviour.
 | Demand | each city consumes 0.04 units of every cargo per tick | declared |
 | Stock update | `stock' = clamp(stock + production - demand + noise, 0, cap)` | declared |
 | Noise | SplitMix64(seed), uniform in ±2 units, one draw per cargo per tick in cargo-index order | declared |
-| Price | `base × (1 + factor × (1 - stock / initial_stock))` | declared; base and factor from `.cty` |
+| Price | `base × (1 + factor × (1 - stock / initial_stock))` | declared; base and factor from `.cty`, factor clamped to [0, 1] when loaded |
 | Price bounds | 0.5 × base to 1.5 × base | declared |
 | Dump | one JSON line per month: month, then per-cargo name, stock and price to two decimals in cargo-index order | declared |
 
@@ -78,6 +78,8 @@ from the original game rather than reproductions of it:
 - 10,000 initial stock and the 10× stock cap;
 - ±2 units of SplitMix64(seed) noise per cargo per tick;
 - the price formula and its 0.5×–1.5× base bounds;
+- the `factor` clamp to [0, 1] when the catalogue is loaded (all 41 shipped
+  values lie inside it);
 - 30-tick months.
 
 Consequence on British Isles: the map carries no placed building records, so
