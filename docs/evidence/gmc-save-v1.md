@@ -162,7 +162,8 @@ export RT3_SAVE="review-tmp/saves/Central west Pacific 1.gmc"
 export RT3_CONTROL_SAVE="review-tmp/saves/rt3engine-bi-18290101-202.gms"
 export RT3_CONTROL_SAVE_2="review-tmp/saves/rt3c-bi-1829-02.gms"
 export RT3_TRACK_SAVE="review-tmp/saves/b1.gms"
-cargo test -p rt3-kit save rail
+cargo test -p rt3-kit save
+cargo test -p rt3-kit rail
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_SAVE" --json
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_CONTROL_SAVE" --json
 cargo run -q --release -p rt3ctl -- save diff --path-a "$RT3_CONTROL_SAVE" --path-b "$RT3_CONTROL_SAVE_2" --json
