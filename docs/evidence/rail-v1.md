@@ -46,7 +46,7 @@ connectivity is not claimed.
 ## Reproduce
 
 ```sh
-export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
+export RT3_HOME="${RT3_HOME:?set RT3_HOME to the installation root}"
 export RT3_TRACK_SAVE="review-tmp/saves/b1.gms"
 cargo test -p rt3-kit rail
 ```
