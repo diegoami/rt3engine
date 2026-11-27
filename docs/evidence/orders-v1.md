@@ -26,7 +26,9 @@ claim C4.
 ## State, log and checkpoints
 
 The canonical state text (`engine::orders::state_line`, fixed order and six
-decimal places for distances) is hashed with SHA-256. The checkpoint is JSON:
+decimal places for distances) escapes spaces, `|`, backslashes and control
+characters, so distinct names cannot produce the same text. It is hashed once
+with SHA-256. The checkpoint is JSON:
 
 ```json
 {"version":1,"seq":3,"log_sha256":"…","state_sha256":"…","state":{…}}
@@ -52,10 +54,10 @@ Two declared stations, a 120-unit track, `PlanetL` with cars `242 A1` and
 
 | Seq | Order | State SHA-256 |
 |---|---|---|
-| 0 | init | `2ecc7d960e5723443098c81fd7e8caf2a4337822ce1ad631bf6bba05ac38fce1` |
-| 1 | build-track | `8785cbd32e8ba29dfc4542a70975c86dc10e364b689ef200618c8ca5eb294ead` |
-| 2 | buy-train | `c59ebb597024a75b293224e5f6957da647d4512e5ac661bfefd856accd2ccec5` |
-| 3 | assign-schedule | `7a79e9705f907df1c941f9d6e2bcd49ef80b8f092d8b80bb509007599c4e2bab` |
+| 0 | init | `0de50086fa86eaec311d60d5e634d54c47a31bf53d318607c14c50657527dbcd` |
+| 1 | build-track | `10532b067a3673f7a7b2789ccff300256fab1c81aa84cb123ab0762d87ef82e3` |
+| 2 | buy-train | `7bd417b98953f661eedaa54b01d9cf8af08289ee05bc396816353bce93de4762` |
+| 3 | assign-schedule | `9c526411bf691fbedc5f756d9d302ff271489f6593c57caf2c7fb56f0829a23c` |
 
 A replay from the seq-1 checkpoint and a replay from the seq-0 checkpoint print
 identical output and the same final hash.
@@ -66,7 +68,7 @@ The populated fixture's station section supplies 3 references; slots 0 and 1
 are declared Bath and Gloucester, slot 2 is declared Tower. Building a
 2,054.776-unit track between slots 0 and 1 and assigning the `PlanetL` consist
 reaches final hash
-`905fa6ac51491034c69527e38ea6b0090800b5de89a26cc108158b0205f87a8b`. The
+`3e63bacf4bff67423bdf7235319f2c9ae6675dd860b26e0b1343f79d114d08b5`. The
 built path's measured length is `2054.77587890625` under f32 piece origins,
 not the decoded C2 path length; the declared geometry is not the original
 track.
@@ -80,6 +82,9 @@ track.
 - File writes are not transactional: a failure between the log and checkpoint
   writes leaves the pair inconsistent and the next command detects it through
   the log hash.
+- A checkpoint is rejected unless its state re-validates: unique non-empty
+  station labels, track endpoints that exist and differ, and schedule stops
+  that reference existing stations and match the track endpoints.
 - No economy, company or AI state is part of the order checkpoint.
 
 ## Reproduce

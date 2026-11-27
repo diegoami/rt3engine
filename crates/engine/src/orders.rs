@@ -116,6 +116,14 @@ impl OrderState {
 
     /// Applies one order, or leaves the state untouched and returns the reason.
     pub fn apply(&mut self, order: &Order) -> Result<(), String> {
+        let mut next = self.clone();
+        next.apply_one(order)?;
+        next.validate()?;
+        *self = next;
+        Ok(())
+    }
+
+    fn apply_one(&mut self, order: &Order) -> Result<(), String> {
         match order {
             Order::BuildTrack {
                 from_slot,
@@ -184,6 +192,75 @@ impl OrderState {
                 crate::schedule::Train::new(consist.clone(), schedule.clone(), track.path.clone())
                     .ok_or_else(|| "assign-schedule: run rejected".to_string())?;
                 self.schedule = Some(schedule);
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks the state invariants a checkpoint must satisfy: unique non-empty
+    /// station labels, a track whose endpoints are existing distinct station
+    /// slots, and a schedule that references existing slots and matches the
+    /// track endpoints.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.stations.is_empty() {
+            return Err("state has no station references".into());
+        }
+        let mut slots = Vec::with_capacity(self.stations.len());
+        for station in &self.stations {
+            if !clean_name(&station.label) {
+                return Err("station label is empty or has a control character".into());
+            }
+            if slots.contains(&station.slot) {
+                return Err(format!("duplicate station slot {}", station.slot));
+            }
+            slots.push(station.slot);
+        }
+        if let Some(track) = &self.track {
+            if !slots.contains(&track.from_slot) {
+                return Err(format!(
+                    "track origin references missing station slot {}",
+                    track.from_slot
+                ));
+            }
+            if !slots.contains(&track.to_slot) {
+                return Err(format!(
+                    "track destination references missing station slot {}",
+                    track.to_slot
+                ));
+            }
+            if track.from_slot == track.to_slot {
+                return Err("track endpoints are the same station slot".into());
+            }
+            if !track.path.length().is_finite() || track.path.length() <= 0.0 {
+                return Err("track path has no length".into());
+            }
+        }
+        if let Some(schedule) = &self.schedule {
+            let track = self
+                .track
+                .as_ref()
+                .ok_or_else(|| "schedule exists without a track".to_string())?;
+            if self.consist.is_none() {
+                return Err("schedule exists without a consist".into());
+            }
+            for stop in &schedule.stops {
+                if !slots.contains(&stop.station.slot) {
+                    return Err(format!(
+                        "schedule references missing station slot {}",
+                        stop.station.slot
+                    ));
+                }
+            }
+            let first = schedule
+                .stops
+                .first()
+                .ok_or_else(|| "schedule has no stops".to_string())?;
+            let last = schedule
+                .stops
+                .last()
+                .ok_or_else(|| "schedule has no stops".to_string())?;
+            if first.station.slot != track.from_slot || last.station.slot != track.to_slot {
+                return Err("schedule endpoints do not match the track".into());
             }
         }
         Ok(())
@@ -264,6 +341,7 @@ fn escape(text: &str) -> String {
         match character {
             '\\' => out.push_str("\\\\"),
             '|' => out.push_str("\\|"),
+            ' ' => out.push_str("\\s"),
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),

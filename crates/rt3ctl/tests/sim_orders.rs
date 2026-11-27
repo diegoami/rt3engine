@@ -7,7 +7,7 @@ use std::process::{Command, Output};
 
 use serde_json::Value;
 
-const FINAL_HASH: &str = "7a79e9705f907df1c941f9d6e2bcd49ef80b8f092d8b80bb509007599c4e2bab";
+const FINAL_HASH: &str = "9c526411bf691fbedc5f756d9d302ff271489f6593c57caf2c7fb56f0829a23c";
 
 fn exe() -> &'static str {
     env!("CARGO_BIN_EXE_rt3ctl")
@@ -299,11 +299,13 @@ fn invalid_orders_do_not_advance_the_log() {
     ]);
     assert!(build.status.success());
     let log_text = fs::read_to_string(&log).expect("log");
-    let tampered = log_text.replacen(
-        "8785cbd32e8ba29dfc4542a70975c86dc10e364b689ef200618c8ca5eb294ead",
-        &"0".repeat(64),
-        1,
-    );
+    let first: Value = serde_json::from_str(log_text.lines().next().expect("first log line"))
+        .expect("log line JSON");
+    let recorded = first["state_sha256"]
+        .as_str()
+        .expect("recorded state hash")
+        .to_string();
+    let tampered = log_text.replacen(&recorded, &"0".repeat(64), 1);
     fs::write(&log, tampered).expect("tamper log");
     let replay = ctl(&[
         "sim",
@@ -343,6 +345,93 @@ fn init_rejects_duplicate_station_slots() {
     ]);
     assert!(!output.status.success());
     assert!(!checkpoint.exists());
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn a_log_checkpoint_mismatch_is_rejected_without_appending() {
+    let root = dir("mismatch");
+    let checkpoint = root.join("checkpoint.json");
+    let log = root.join("orders.jsonl");
+    let after_build = root.join("cp1.json");
+
+    init(&checkpoint, &log, &["0:Bath", "1:Gloucester"]);
+    let build = ctl(&[
+        "sim",
+        "build-track",
+        "--checkpoint",
+        &path_string(&checkpoint),
+        "--log",
+        &path_string(&log),
+        "--from",
+        "0",
+        "--to",
+        "1",
+        "--length",
+        "120",
+    ]);
+    assert!(build.status.success());
+    fs::copy(&checkpoint, &after_build).expect("copy checkpoint");
+    let buy = ctl(&[
+        "sim",
+        "buy-train",
+        "--checkpoint",
+        &path_string(&checkpoint),
+        "--log",
+        &path_string(&log),
+        "--locomotive",
+        "PlanetL",
+    ]);
+    assert!(buy.status.success());
+
+    let original = fs::read_to_string(&log).expect("log");
+    let tampered = original.replacen("\"build-track\"", "\"buy-train\"", 1);
+    assert_ne!(tampered, original);
+    fs::write(&log, &tampered).expect("tamper log");
+    let size = fs::metadata(&log).expect("log metadata").len();
+
+    let assign = ctl(&[
+        "sim",
+        "assign-schedule",
+        "--checkpoint",
+        &path_string(&checkpoint),
+        "--log",
+        &path_string(&log),
+    ]);
+    assert!(
+        !assign.status.success(),
+        "a log/checkpoint mismatch must reject a new order"
+    );
+    assert!(
+        String::from_utf8_lossy(&assign.stderr).contains("does not match the checkpoint"),
+        "unexpected error: {}",
+        String::from_utf8_lossy(&assign.stderr)
+    );
+    assert_eq!(
+        fs::metadata(&log).expect("log metadata").len(),
+        size,
+        "a rejected order must not append to the log"
+    );
+
+    let replay = ctl(&[
+        "sim",
+        "replay",
+        "--checkpoint",
+        &path_string(&after_build),
+        "--log",
+        &path_string(&log),
+        "--json",
+    ]);
+    assert!(
+        !replay.status.success(),
+        "a changed log prefix must fail replay"
+    );
+    assert!(
+        String::from_utf8_lossy(&replay.stderr).contains("prefix does not match"),
+        "unexpected error: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
     fs::remove_dir_all(&root).ok();
 }
 

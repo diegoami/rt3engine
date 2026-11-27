@@ -248,7 +248,11 @@ where
 }
 
 fn hex(bytes: &[u8]) -> String {
-    sha256(bytes).iter().map(|b| format!("{b:02x}")).collect()
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn digest_hex(bytes: &[u8]) -> String {
+    hex(&sha256(bytes))
 }
 
 /// Runs `rt3ctl sim init`.
@@ -305,6 +309,7 @@ fn init_checkpoint(init: Init) -> Result<(), String> {
     stations.sort_by_key(|station| station.slot);
 
     let state = OrderState::new(stations);
+    state.validate().map_err(|error| format!("init: {error}"))?;
     fs::write(&init.log, b"").map_err(|error| format!("{}: {error}", init.log.display()))?;
     write_checkpoint(&init.checkpoint, 0, &[], &state)
         .map_err(|error| format!("{}: {error}", init.checkpoint.display()))?;
@@ -337,7 +342,7 @@ fn apply_order(command: OrderCommand) -> Result<(), String> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound && seq == 0 => Vec::new(),
         Err(error) => return Err(format!("{}: {error}", command.log.display())),
     };
-    if hex(&sha256(&log)) != log_sha {
+    if digest_hex(&log) != log_sha {
         return Err("the order log does not match the checkpoint".into());
     }
     state.apply(&command.order)?;
@@ -395,7 +400,7 @@ fn replay_orders(replay: &Replay) -> Result<(), String> {
         .iter()
         .map(|line| format!("{line}\n"))
         .collect();
-    if hex(&sha256(prefix.as_bytes())) != log_sha {
+    if digest_hex(prefix.as_bytes()) != log_sha {
         return Err("the order log prefix does not match the checkpoint".into());
     }
 
@@ -452,7 +457,7 @@ fn write_checkpoint(path: &Path, seq: u64, log: &[u8], state: &OrderState) -> Re
     let value = json!({
         "version": ORDER_STATE_VERSION,
         "seq": seq,
-        "log_sha256": hex(&sha256(log)),
+        "log_sha256": digest_hex(log),
         "state_sha256": hex(&state.state_digest()),
         "state": state_json(state),
     });
@@ -642,6 +647,7 @@ fn state_from_json(value: &Value) -> Result<OrderState, String> {
                 .ok_or_else(|| "checkpoint schedule is invalid".to_string())?,
         );
     }
+    state.validate()?;
     Ok(state)
 }
 
