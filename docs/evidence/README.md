@@ -41,8 +41,9 @@ Original save inventory findings are in
 [controlled-save-diff-v1.md](controlled-save-diff-v1.md). The declared track
 graph from the populated fixture is in [rail-v1.md](rail-v1.md), the declared
 consist movement model over that graph is in [movement-v1.md](movement-v1.md),
-and the declared stations/consists/schedules model is in
-[schedule-v1.md](schedule-v1.md).
+the declared stations/consists/schedules model is in
+[schedule-v1.md](schedule-v1.md), and the declared headless orders, order log
+and checkpoints are in [orders-v1.md](orders-v1.md).
 Milestone 3 adds map findings; later milestones add save
 findings, each with its producer command and method note (Ghidra address,
 oracle session, or both).
