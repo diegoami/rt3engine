@@ -39,7 +39,9 @@ in [gmp-actors-v1.md](gmp-actors-v1.md).
 Original save inventory findings are in
 [gmc-save-v1.md](gmc-save-v1.md), with the independent-pair differential in
 [controlled-save-diff-v1.md](controlled-save-diff-v1.md). The declared track
-graph from the populated fixture is in [rail-v1.md](rail-v1.md).
+graph from the populated fixture is in [rail-v1.md](rail-v1.md), and the
+declared consist movement model over that graph is in
+[movement-v1.md](movement-v1.md).
 Milestone 3 adds map findings; later milestones add save
 findings, each with its producer command and method note (Ghidra address,
 oracle session, or both).
