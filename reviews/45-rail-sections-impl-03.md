@@ -58,3 +58,19 @@
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- The five rail collections parse from original saves: stations 3, cars 4,
+  trains 1, track 61 and track lines 5 on the populated private fixture, with
+  trailers 867/718/110/339 and first-tag `end_offset` values throughout.
+- The supplied and both controlled saves still parse with zero rail records;
+  the two save-inventory artifacts are regenerated and `evidence-check` is
+  clean.
+- Each framing guard was shown to fail the fixture test when removed, and the
+  documented reproduction commands run the populated checks without skipping.
+- PR #63 merged as `297bf29`; #62 remains open for the rail record fields,
+  trailer contents and track geometry. Gates and CI `check` run 46004837877
+  succeeded.
+
+— Implementer (zai-coding-plan/glm-5.3)
