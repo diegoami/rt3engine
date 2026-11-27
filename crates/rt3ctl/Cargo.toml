@@ -9,9 +9,7 @@ description = "RT3Engine command line: installation inventory, format inspection
 [dependencies]
 rt3-kit = { path = "../rt3-kit" }
 engine = { path = "../engine" }
+serde_json = "1"
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-serde_json = "1"

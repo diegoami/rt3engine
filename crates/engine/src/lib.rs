@@ -16,10 +16,12 @@
 //! Status: milestone 6 — `world` (map-grounded structural world: terrain,
 //! city and building records, cargo catalogue), `economy` (declared fixed-tick
 //! cargo supply, demand and prices), `movement` (declared consist motion on
-//! the decoded track graph) and `schedule` (consists, station references and
-//! scheduled stops).
+//! the decoded track graph), `schedule` (consists, station references and
+//! scheduled stops) and `orders` (declared headless player commands and their
+//! canonical state).
 
 pub mod economy;
 pub mod movement;
+pub mod orders;
 pub mod schedule;
 pub mod world;
