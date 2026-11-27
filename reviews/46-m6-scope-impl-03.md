@@ -44,3 +44,16 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- The milestone 6 scope proposal lands: the promise, claims C1–C6 (including
+  the AI competitor v0), the not-in-release list and the gate are fixed in
+  `docs/milestones.md` before any M6 work starts.
+- PR #64 merged as `3a1ea0a`. This is a proposal only: no version is assigned
+  and M6 starts when the owner calls it. The rail field decode remains open in
+  #62.
+- Reviews: `reviews/46-m6-scope-impl-01.md` (BLOCK),
+  `-02.md` (BLOCK), `-03.md` (AGREE); `make fmt` and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)
