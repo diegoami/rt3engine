@@ -166,21 +166,28 @@ pub struct Train {
 impl Train {
     /// Places the consist at the first station on `path`.
     pub fn new(consist: Consist, schedule: Schedule, path: Path) -> Option<Train> {
-        let schedule = Schedule::new(schedule.stops.clone(), path.length())?;
+        let mut schedule = Schedule::new(schedule.stops.clone(), path.length())?;
+        // The endpoint tolerance accepts a final stop within a millionth of
+        // the path end; normalize it so the run reaches the exact path end.
+        schedule.stops.last_mut()?.distance = path.length();
         let first = &schedule.stops[0];
+        let mut stops = vec![StopRecord {
+            stop: 0,
+            slot: first.station.slot,
+            station: first.station.label.clone(),
+            distance: first.distance,
+            arrival: 0,
+            departure: None,
+        }];
+        if first.dwell_ticks == 0 {
+            stops[0].departure = Some(0);
+        }
         Some(Train {
             consist,
             movement: Movement::new(path),
             dwell_remaining: first.dwell_ticks,
             next_stop: 1,
-            stops: vec![StopRecord {
-                stop: 0,
-                slot: first.station.slot,
-                station: first.station.label.clone(),
-                distance: first.distance,
-                arrival: 0,
-                departure: None,
-            }],
+            stops,
             schedule,
         })
     }

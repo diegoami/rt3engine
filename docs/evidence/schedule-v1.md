@@ -17,11 +17,11 @@ model in [movement-v1.md](movement-v1.md) and the track graph in
 - **Schedule.** At least two stops, strictly increasing along the path, the
   first at the path start and the last at the path end, all within the path.
   `Schedule::between` builds the two-stop case from two station-DB records.
-- **Run.** Each stop carries a declared dwell; a scheduled run dwells there
-  before departing. `Schedule::between` uses `DEFAULT_DWELL_TICKS` (5) at the
-  origin and no dwell at the final station. The train travels under the
-  declared movement model and stops at the final station. There is no
-  randomness.
+- **Run.** Each stop carries a declared dwell; a zero-dwell stop departs at
+  its arrival tick (the origin at tick 0). `Schedule::between` uses
+  `DEFAULT_DWELL_TICKS` (5) at the origin and no dwell at the final station.
+  The train travels under the declared movement model and stops at the final
+  station. There is no randomness.
 
 The schedule dump is one fixed-order JSON line per reached stop:
 `{"stop","slot","station","distance","arrival","departure"}`, with `null`
@@ -66,8 +66,9 @@ the same path in C2.
   labels, their slots and their path distances are declared.
 - The fixture's car-to-type assignment is declared; the save's own composition
   is not decoded.
-- Dwell times, consist capacities and per-consist performance are declared, not
-  recovered. Revenue and operating costs belong to C5.
+- Dwell times and per-consist performance are declared, not recovered. Consist
+  capacity is not modelled at all: the typed records used here carry no proven
+  capacity field, and revenue and operating costs belong to C5.
 
 ## Reproduce
 

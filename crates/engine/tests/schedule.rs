@@ -189,6 +189,77 @@ fn schedule_requires_ordered_stops_from_start_to_path_end() {
 }
 
 #[test]
+fn zero_dwell_origin_records_its_departure() {
+    let stations = stations_collection(2);
+    let path = Path::from_graph(&TrackGraph::from_pieces(vec![
+        piece(0.0, 0.0),
+        piece(15.0, 0.0),
+        piece(30.0, 0.0),
+    ]))
+    .expect("path");
+    let schedule = Schedule::new(
+        vec![
+            Stop {
+                station: station(&stations, 0, "A"),
+                distance: 0.0,
+                dwell_ticks: 0,
+            },
+            Stop {
+                station: station(&stations, 1, "B"),
+                distance: 30.0,
+                dwell_ticks: 0,
+            },
+        ],
+        path.length(),
+    )
+    .expect("schedule");
+    let mut train = Train::new(consist(), schedule, path).expect("train");
+    assert_eq!(train.stops[0].departure, Some(0));
+
+    run(&mut train, 500);
+    assert!(train.finished());
+    assert_eq!(train.stops[0].departure, Some(0));
+    assert!(train.stops[1].arrival > 0);
+}
+
+#[test]
+fn near_equal_final_stop_is_normalized_to_the_path_end() {
+    let stations = stations_collection(2);
+    let path = Path::from_graph(&TrackGraph::from_pieces(vec![
+        piece(0.0, 0.0),
+        piece(15.0, 0.0),
+        piece(30.0, 0.0),
+    ]))
+    .expect("path");
+    let schedule = Schedule::new(
+        vec![
+            Stop {
+                station: station(&stations, 0, "A"),
+                distance: 0.0,
+                dwell_ticks: 1,
+            },
+            Stop {
+                station: station(&stations, 1, "B"),
+                distance: 29.999_999_5,
+                dwell_ticks: 0,
+            },
+        ],
+        path.length(),
+    )
+    .expect("schedule");
+    let mut train = Train::new(consist(), schedule, path).expect("train");
+    run(&mut train, 500);
+    assert!(train.finished());
+    assert!(train.movement.stopped);
+    assert_eq!(train.movement.distance, train.movement.path.length());
+    assert!(train
+        .dump_lines()
+        .last()
+        .unwrap()
+        .contains("\"distance\":30.000"));
+}
+
+#[test]
 fn replay_produces_the_same_stops_and_dump() {
     let stations = stations_collection(3);
     let mut first = {
