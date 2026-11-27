@@ -86,9 +86,9 @@ run on two maps and the documented divergence.
 track and consist structures feed a declared planar track graph; a consist
 moves on fixed ticks under a documented movement model; stations, consists and
 schedules are executed; headless player commands carry an order log and
-checkpoints; a scripted company reaches positive cash flow against a declared
-AI competitor v0; replay is byte-identical and every declared rule and
-divergence is documented.
+checkpoints; a scripted company reaches positive cash flow while a declared
+AI competitor v0 operates on the same scenario; replay is byte-identical and
+every declared rule and divergence is documented.
 
 Claims, each naming the check that proves it:
 
@@ -126,12 +126,11 @@ Claims, each naming the check that proves it:
   cost rules and every divergence from measurable original state are listed in
   `docs/evidence/rail-economy-v1.md`. Check: an install-backed scripted run
   plus `rt3ctl` output and the evidence table.
-- **C6 — AI competitor v0.** One declared competitor company operates on the
-  same scenario under a fixed scripted policy (the declared v0 rule), with
-  deterministic behavior and no recovered original AI. Check: an engine test
-  with the scripted competitor on a committed synthetic scenario, a replay
-  hash, and the declared policy and its divergences in
-  `docs/evidence/rail-economy-v1.md`.
+- **C6 — AI competitor v0.** One declared competitor company operates in the
+  C5 scenario under a fixed scripted policy (the declared v0 rule), with
+  deterministic behavior and no recovered original AI. Check: the joint C5
+  run with the competitor active, a replay hash, and the declared policy and
+  its divergences in `docs/evidence/rail-economy-v1.md`.
 
 **Not in this release:** original track geometry and physics constants,
 original train performance or schedule data, AI competitor behavior beyond the
@@ -143,8 +142,8 @@ bit-exact original fidelity, and any original constant reverse engineering has
 not recovered.
 
 **Gate:** C1–C6 met on the candidate, including the scripted company's positive
-cash flow, the deterministic AI competitor v0 and byte-identical command-log
-replay.
+cash flow in the joint run with the AI competitor v0 active, and byte-identical
+command-log replay.
 
 ## Selection and completion rules
 
