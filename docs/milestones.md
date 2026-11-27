@@ -80,7 +80,7 @@ recovered.
 **Gate:** C1–C5 met on the candidate, including the deterministic multi-year
 run on two maps and the documented divergence.
 
-## Milestone 6 — trains, track and commands (scope proposed 2026-11-27)
+## Milestone 6 — trains, track and commands (scope fixed 2026-11-27; opened by the owner 2026-11-27)
 
 **Promise:** a headless rail layer over loaded original maps — the decoded
 track and consist structures feed a declared planar track graph; a consist

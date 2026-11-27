@@ -100,6 +100,122 @@ pub fn track_lines(bytes: &[u8]) -> Option<FixedBlobCollection> {
     )
 }
 
+/// Byte offset of the piece origin (three f32) in a track record blob.
+pub const TRACK_ORIGIN_OFFSET: usize = 12;
+/// An origin step above this many units starts a new run.
+pub const RUN_BREAK_UNITS: f32 = 100.0;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrackPiece {
+    pub origin: [f32; 3],
+}
+
+/// A declared connectivity graph over decoded track piece origins.
+///
+/// Runs split where consecutive origins are more than [`RUN_BREAK_UNITS`]
+/// apart; run ends within one median piece step are joined. The rule is a
+/// declared model of connectivity, not a recovered game semantic.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrackGraph {
+    pub pieces: Vec<TrackPiece>,
+    pub runs: Vec<std::ops::Range<usize>>,
+    pub joins: Vec<(usize, usize)>,
+    pub piece_length: f32,
+}
+
+fn distance(a: [f32; 3], b: [f32; 3]) -> f32 {
+    let dx = a[0] - b[0];
+    let dy = a[1] - b[1];
+    let dz = a[2] - b[2];
+    (dx * dx + dy * dy + dz * dz).sqrt()
+}
+
+impl TrackGraph {
+    /// Builds the graph from a parsed track collection.
+    pub fn from_collection(track: &SparseBlobCollection) -> Option<Self> {
+        let mut pieces = Vec::new();
+        pieces.try_reserve_exact(track.records.len()).ok()?;
+        for record in &track.records {
+            let raw = record
+                .data
+                .get(TRACK_ORIGIN_OFFSET..TRACK_ORIGIN_OFFSET + 12)?;
+            let origin = [
+                f32::from_le_bytes(raw[0..4].try_into().ok()?),
+                f32::from_le_bytes(raw[4..8].try_into().ok()?),
+                f32::from_le_bytes(raw[8..12].try_into().ok()?),
+            ];
+            if !origin.iter().all(|value| value.is_finite()) {
+                return None;
+            }
+            pieces.push(TrackPiece { origin });
+        }
+        Some(Self::from_pieces(pieces))
+    }
+
+    /// Splits runs and joins run ends under the declared rule.
+    pub fn from_pieces(pieces: Vec<TrackPiece>) -> Self {
+        let mut runs: Vec<std::ops::Range<usize>> = Vec::new();
+        if !pieces.is_empty() {
+            let mut start = 0;
+            for index in 1..pieces.len() {
+                if distance(pieces[index - 1].origin, pieces[index].origin) > RUN_BREAK_UNITS {
+                    runs.push(start..index);
+                    start = index;
+                }
+            }
+            runs.push(start..pieces.len());
+        }
+
+        let mut steps: Vec<f32> = Vec::new();
+        for run in &runs {
+            for index in run.start + 1..run.end {
+                steps.push(distance(pieces[index - 1].origin, pieces[index].origin));
+            }
+        }
+        steps.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let piece_length = if steps.is_empty() {
+            0.0
+        } else {
+            steps[steps.len() / 2]
+        };
+
+        let mut joins = Vec::new();
+        if piece_length > 0.0 {
+            for a in 0..runs.len() {
+                for b in a + 1..runs.len() {
+                    for (end, start) in [
+                        (runs[a].end - 1, runs[b].start),
+                        (runs[b].end - 1, runs[a].start),
+                    ] {
+                        if distance(pieces[end].origin, pieces[start].origin) <= piece_length {
+                            joins.push((end, start));
+                        }
+                    }
+                }
+            }
+        }
+
+        Self {
+            pieces,
+            runs,
+            joins,
+            piece_length,
+        }
+    }
+
+    /// Edges: consecutive pieces within a run, plus the declared joins.
+    pub fn edges(&self) -> Vec<(usize, usize)> {
+        let mut edges = Vec::new();
+        for run in &self.runs {
+            for index in run.start + 1..run.end {
+                edges.push((index - 1, index));
+            }
+        }
+        edges.extend(self.joins.iter().copied());
+        edges
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,5 +369,61 @@ mod tests {
         assert_eq!(trains.trailer.len(), 110);
         assert_eq!(track.trailer.len(), 339);
         assert!(track_lines.trailer.is_empty());
+    }
+
+    #[test]
+    fn splits_runs_and_joins_run_ends() {
+        let pieces = vec![
+            TrackPiece {
+                origin: [0.0, 0.0, 0.0],
+            },
+            TrackPiece {
+                origin: [33.0, 0.0, 0.0],
+            },
+            TrackPiece {
+                origin: [1000.0, 0.0, 0.0],
+            },
+            TrackPiece {
+                origin: [33.0, 33.0, 0.0],
+            },
+            TrackPiece {
+                origin: [66.0, 33.0, 0.0],
+            },
+        ];
+        let graph = TrackGraph::from_pieces(pieces);
+        assert_eq!(graph.runs, vec![0..2, 2..3, 3..5]);
+        assert!((graph.piece_length - 33.0).abs() < 0.01);
+        assert_eq!(graph.joins, vec![(1, 3)]);
+        assert_eq!(graph.edges().len(), 3);
+    }
+
+    #[test]
+    fn builds_the_declared_graph_from_the_populated_fixture() {
+        let Ok(path) = std::env::var("RT3_TRACK_SAVE") else {
+            eprintln!("RT3_TRACK_SAVE unset; skipping populated track graph check");
+            return;
+        };
+        let path = std::path::PathBuf::from(path);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+            let candidate = repo.join(&path);
+            if candidate.exists() {
+                candidate
+            } else {
+                path
+            }
+        };
+        let bytes = fs::read(&path).expect("track fixture");
+        let track = track(&bytes).expect("track collection");
+        let graph = TrackGraph::from_collection(&track).expect("track graph");
+        assert_eq!(graph.pieces.len(), 61);
+        assert_eq!(graph.runs, vec![0..5, 5..10, 10..61]);
+        assert!((30.0..36.0).contains(&graph.piece_length));
+        assert_eq!(graph.joins.len(), 2);
+        assert!(graph.joins.contains(&(4, 10)));
+        assert!(graph.joins.contains(&(60, 5)));
+        assert_eq!(graph.edges().len(), 60);
     }
 }
