@@ -48,3 +48,16 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M6 C2 lands: `engine::movement` derives the ordered path over the declared
+  track graph and runs a consist under the declared fixed-tick speed,
+  acceleration and braking model. On the private fixture it covers 2,054.776
+  units in 191 ticks with the golden state hash; replay is byte-identical and
+  the model has no randomness.
+- PR #66 merged as `e5c9e21`. C3–C6 are not started; no version is assigned.
+- Reviews: `reviews/48-movement-impl-01.md` (AGREE, no findings). Gates and CI
+  green.
+
+— Implementer (zai-coding-plan/glm-5.3)
