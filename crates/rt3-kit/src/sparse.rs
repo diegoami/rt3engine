@@ -23,6 +23,7 @@ pub struct SparseBlobCollection {
     pub section_offset: usize,
     pub capacity: usize,
     pub records: Vec<SparseBlobRecord>,
+    /// Offset of the first ending tag, before any trailer.
     pub end_offset: usize,
     /// Raw bytes between the two ending tags when the collection carries a
     /// trailer; empty otherwise. Semantics are not inferred.
@@ -133,6 +134,7 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
     if records.len() != active || u32_at(bytes, off)? != spec.end {
         return None;
     }
+    let end_offset = off;
     let mut trailer = Vec::new();
     if let Some(end_tag) = spec.trailer_end {
         let start = off.checked_add(4)?;
@@ -141,13 +143,12 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
         let tag = end_tag.to_le_bytes();
         let pos = window[..limit].windows(4).position(|w| w == tag)?;
         trailer.extend_from_slice(&window[..pos]);
-        off = start.checked_add(pos)?;
     }
     Some(SparseBlobCollection {
         section_offset: section,
         capacity,
         records,
-        end_offset: off,
+        end_offset,
         trailer,
     })
 }

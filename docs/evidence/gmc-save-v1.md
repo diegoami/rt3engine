@@ -134,6 +134,11 @@ month with Great Republic, a Bath–Gloucester line, one Planet 2-2-0 and four
 cars parses as **3 stations, 4 cars, 1 train, 61 track records and 5 track
 lines**, with trailers of 867, 718, 110 and 339 bytes.
 
+The station section is `gpdStationDB`, so it holds station-like facilities,
+not only passenger stations: the populated fixture's three records carry
+distinct type-like values (3, 8 and 23) and the third is the trackside service
+tower. The field's meaning is not proven.
+
 Record field meanings, the trailer contents and the track geometry remain
 open. The header's record-size word is 74 for track lines while the stored
 record is 36 bytes, so `rt3-kit::fixed` separates the header value from the
@@ -156,7 +161,8 @@ export RT3_HOME="/mnt/c/Program Files/GOG Galaxy/Games/Railroad Tycoon 3"
 export RT3_SAVE="review-tmp/saves/Central west Pacific 1.gmc"
 export RT3_CONTROL_SAVE="review-tmp/saves/rt3engine-bi-18290101-202.gms"
 export RT3_CONTROL_SAVE_2="review-tmp/saves/rt3c-bi-1829-02.gms"
-cargo test -p rt3-kit save
+export RT3_TRACK_SAVE="review-tmp/saves/b1.gms"
+cargo test -p rt3-kit save rail
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_SAVE" --json
 cargo run -q --release -p rt3ctl -- save inspect --path "$RT3_CONTROL_SAVE" --json
 cargo run -q --release -p rt3ctl -- save diff --path-a "$RT3_CONTROL_SAVE" --path-b "$RT3_CONTROL_SAVE_2" --json

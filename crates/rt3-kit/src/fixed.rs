@@ -16,7 +16,7 @@ pub struct FixedBlobCollection {
     pub section_offset: usize,
     pub capacity: usize,
     pub records: Vec<FixedBlobRecord>,
-    /// Offset of the first collection-ending tag.
+    /// Offset of the first collection-ending tag, before any trailer.
     pub end_offset: usize,
     /// Raw bytes between the two ending tags when the collection carries a
     /// trailer; empty otherwise. Semantics are not inferred.

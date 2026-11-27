@@ -11,9 +11,9 @@
   "companies": {"section_offset": 5710149, "capacity": 5, "records": 3, "end_offset": 5801314, "founded_years": [1830, 1830, 1829], "names": ["Edinburgh Express (Liquidated)", "London Rails (Liquidated)", "Great Republic"]},
   "players": {"section_offset": 5801645, "capacity": 4, "records": 3, "end_offset": 5811459, "names": ["George Hudson", "Isambard Kingdom Brunel", "Sir John Forrest"]},
   "stations": {"section_offset": 5709262, "capacity": 10, "records": 0, "end_offset": 5709348, "trailer_bytes": 0},
-  "cars": {"section_offset": 5709356, "capacity": 10, "records": 0, "end_offset": 5709446, "trailer_bytes": 0},
+  "cars": {"section_offset": 5709356, "capacity": 10, "records": 0, "end_offset": 5709442, "trailer_bytes": 0},
   "trains": {"section_offset": 5709450, "capacity": 50, "records": 0, "end_offset": 5710141, "trailer_bytes": 0},
-  "track": {"section_offset": 5801322, "capacity": 1000, "records": 0, "end_offset": 5801540, "trailer_bytes": 4},
+  "track": {"section_offset": 5801322, "capacity": 1000, "records": 0, "end_offset": 5801532, "trailer_bytes": 4},
   "track_lines": {"section_offset": 5801544, "capacity": 100, "records": 0, "end_offset": 5801641, "trailer_bytes": 0},
   "events": {"section_offset": 5992027, "capacity": 50, "records": 39, "end_offset": 6078483}
 }
