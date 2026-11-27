@@ -82,23 +82,25 @@ run on two maps and the documented divergence.
 
 ## Milestone 6 — trains, track and commands (scope proposed 2026-11-27)
 
-**Promise:** a headless rail layer over loaded original maps — decoded track,
-station and consist structures feed a declared planar track graph; a consist
+**Promise:** a headless rail layer over loaded original maps — the decoded
+track and consist structures feed a declared planar track graph; a consist
 moves on fixed ticks under a documented movement model; stations, consists and
 schedules are executed; headless player commands carry an order log and
-checkpoints; a scripted company reaches positive cash flow; replay is
-byte-identical and every declared rule and divergence is documented.
+checkpoints; a scripted company reaches positive cash flow against a declared
+AI competitor v0; replay is byte-identical and every declared rule and
+divergence is documented.
 
 Claims, each naming the check that proves it:
 
-- **C1 — Rail structures and a declared track graph.** The five rail sections
-  parse structurally, and the populated private fixture's 61 track records
-  yield a single Bath–Gloucester path under a declared connectivity rule:
-  split where the decoded piece-origin step exceeds 100 units, then join run
-  ends within one piece length. The station collection reports Bath, Gloucester
-  and the service tower. Check: the `rt3-kit::rail` tests on
-  `RT3_TRACK_SAVE`, a committed synthetic graph test, and the measured layout
-  in `docs/evidence/rail-v1.md`. Connectivity is a declared model, not a
+- **C1 — Track graph decoder.** Over the five rail readers landed as prior
+  baseline (PR #63, not claimed here), decode the track piece-origin field and
+  build a planar graph with a declared connectivity rule: split where the
+  origin step exceeds 100 units, then join run ends within one piece length.
+  The claim is the graph decoder and its measured origin field; it does **not**
+  claim a station-to-path link, and matching the path ends to station records
+  remains open in #62. Check: graph tests on `RT3_TRACK_SAVE` and a committed
+  synthetic graph, with the measured origins and the declared rule in
+  `docs/evidence/rail-v1.md`. Connectivity is a declared model, not a
   recovered game semantic; the piece orientation/endpoint fields remain open.
 - **C2 — Consist movement on the graph.** A consist moves along the graph at a
   documented speed and acceleration model on fixed ticks, with positions
@@ -117,24 +119,32 @@ Claims, each naming the check that proves it:
   checkpoints, and replaying the log reproduces a byte-identical state. Check:
   CLI integration tests for the command path, the order log and checkpoint
   resume, and a replay comparison by SHA-256.
-- **C5 — Scripted company cash flow.** On the private fixture line a scripted
-  company uses the Bath–Gloucester track, runs the Planet 2-2-0 with its cars
-  under the declared economy, earns revenue and pays operating costs, and
-  reaches positive cash flow within a bounded run. The revenue and cost rules
-  and every divergence from measurable original state are listed in
+- **C5 — Scripted company cash flow.** On the private fixture's decoded track
+  (not a claimed station link), a scripted company runs the fixture's Planet
+  2-2-0 consist under the declared economy, earns revenue and pays operating
+  costs, and reaches positive cash flow within a bounded run. The revenue and
+  cost rules and every divergence from measurable original state are listed in
   `docs/evidence/rail-economy-v1.md`. Check: an install-backed scripted run
   plus `rt3ctl` output and the evidence table.
+- **C6 — AI competitor v0.** One declared competitor company operates on the
+  same scenario under a fixed scripted policy (the declared v0 rule), with
+  deterministic behavior and no recovered original AI. Check: an engine test
+  with the scripted competitor on a committed synthetic scenario, a replay
+  hash, and the declared policy and its divergences in
+  `docs/evidence/rail-economy-v1.md`.
 
 **Not in this release:** original track geometry and physics constants,
-original train performance or schedule data, AI companies and competitor
-behavior, signalling, company finance beyond the scripted model, buildable
-stations or industry changes, the observer (milestone 7), original-save entry
-(milestone 8), the client (milestone 9), MCP surfaces (milestones 11–12),
-original save writing (milestone 13), campaign breadth, bit-exact original
-fidelity, and any original constant reverse engineering has not recovered.
+original train performance or schedule data, AI competitor behavior beyond the
+declared v0 policy, signalling, company finance beyond the scripted model,
+buildable stations or industry changes, the observer (milestone 7),
+original-save entry (milestone 8), the client (milestone 9), MCP surfaces
+(milestones 11–12), original save writing (milestone 13), campaign breadth,
+bit-exact original fidelity, and any original constant reverse engineering has
+not recovered.
 
-**Gate:** C1–C5 met on the candidate, including the scripted company's positive
-cash flow and byte-identical command-log replay.
+**Gate:** C1–C6 met on the candidate, including the scripted company's positive
+cash flow, the deterministic AI competitor v0 and byte-identical command-log
+replay.
 
 ## Selection and completion rules
 
