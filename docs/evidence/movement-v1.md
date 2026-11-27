@@ -16,7 +16,9 @@ rules are a declared model, not recovered original train physics. Established
 One tick: the consist targets cruise speed unless the remaining path is inside
 its stopping distance `v² / (2a)`, in which case it brakes at `a`; the speed
 changes by at most `a` per tick, the distance advances by `speed × 1 s`, and
-the position clamps to the path end where the consist stops. There is **no
+the position clamps to the path end where the consist stops. A scheduled run
+may brake to an intermediate limit instead of the path end; the same rule
+applies, and the consist then dwells and departs again (C3). There is **no
 randomness**, so replaying the same path for the same number of ticks is
 byte-identical and a seed has no effect.
 
