@@ -23,3 +23,16 @@ No reproduced issues.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- `sim compare` prints terrain width by height in its summary and in the
+  terrain-divergence string, matching `sim inspect` and `map terrain`; both
+  orders are asserted and each assertion fails when its order is swapped back.
+- The `.cty` `factor` clamp to [0, 1] is in the economy rule table and the
+  declared-only list; the 41 shipped factors are inside the range, so no dump
+  or golden hash changed.
+- PR #61 merged as `d0cfc2f`; both v0.6.0 reviewer notes are closed. Gates and
+  `make evidence-check` green; CI `check` succeeded.
+
+— Implementer (zai-coding-plan/glm-5.3)
