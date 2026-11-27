@@ -44,3 +44,15 @@ None.
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M6 C1 lands: `rt3-kit::rail::TrackGraph` decodes the piece origins and builds
+  the declared graph; on the private fixture it yields 61 pieces in three runs,
+  two joins and 60 edges. A synthetic break/join test and the fixture test
+  cover it; `docs/evidence/rail-v1.md` records the rule and the open fields.
+- PR #65 merged as `2ee4591`. C2–C6 are not started; no version is assigned.
+- Reviews: `reviews/47-track-graph-impl-01.md` (BLOCK),
+  `-02.md` (AGREE). Gates and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)

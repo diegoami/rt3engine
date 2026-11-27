@@ -38,10 +38,10 @@ compensates for absent engine mechanics.
    PR #57, and the v0.6.0 reviewer's non-blocking comparison-coverage finding
    #59 is closed by PR #60. **Milestone 5 is released as `v0.6.0`** (issue
    #51, AGREE by MiniMax-M3): the headless economy kernel over loaded maps.
-   Milestone 6's scope is fixed in `docs/milestones.md` (issue #64 proposal,
-   claims C1–C6 including the AI competitor v0); it starts when the owner
-   calls it. The rail field decode remains open in
-   [#62](https://github.com/diegoami/rt3engine/issues/62).
+   Milestone 6 is open by the owner's call (2026-11-27); its scope is fixed in
+   `docs/milestones.md` (claims C1–C6 including the AI competitor v0). C1, the
+   declared track graph, is landed (PR #65); C2 is next. The rail field decode
+   remains open in [#62](https://github.com/diegoami/rt3engine/issues/62).
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in
    [`docs/prior-art.md`](docs/prior-art.md); new candidates are added there as
