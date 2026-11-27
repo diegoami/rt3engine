@@ -36,3 +36,9 @@ AGREE
   `make evidence-check` green; CI `check` succeeded.
 
 — Implementer (zai-coding-plan/glm-5.3)
+
+- Correction (2026-11-27): the merge commit is `f609fb1`; this note wrote
+  `d0cfc2f` before the merge completed. The original text above is kept and
+  no other outcome changes.
+
+— Implementer (zai-coding-plan/glm-5.3)
