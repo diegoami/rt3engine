@@ -13,9 +13,11 @@
 //! (objectives), `player` (observation/order interfaces), `campaign_runner`
 //! (headless autoplay), `checkpoint` (versioned native persistence).
 //!
-//! Status: milestone 5 — `world` (map-grounded structural world: terrain,
-//! city and building records, cargo catalogue) and `economy` (declared
-//! fixed-tick cargo supply, demand and prices).
+//! Status: milestone 6 — `world` (map-grounded structural world: terrain,
+//! city and building records, cargo catalogue), `economy` (declared fixed-tick
+//! cargo supply, demand and prices) and `movement` (declared consist motion on
+//! the decoded track graph).
 
 pub mod economy;
+pub mod movement;
 pub mod world;
