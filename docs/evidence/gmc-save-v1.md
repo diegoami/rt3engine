@@ -111,9 +111,38 @@ standard `abc` known-vector test. Save parsing rejects other versions and any
 missing proven section. Fixture regressions check file size, hash, source-map
 basename, dimensions and every collection count above.
 
+## Rail infrastructure sections (structural)
+
+The same container carries stations, cars, trains, track and track lines. The
+generic collection reader (`FUN_00518680`) walks the declared capacity, treats
+a set mask bit as an absent slot, reads fixed records or per-record length
+prefixed blobs, and may end with an opaque trailer between two tags.
+`rt3-kit::rail` reads:
+
+| Section | Outer / inner tag | Stored records | End tags / trailer |
+|---|---|---|---|
+| Stations | `0x332a` / `0x4a9d` | fixed 1,549 B | `0x4a3a` … `0x4a3b` |
+| Cars | `0x332b` / `0x4a39` | 6-byte prefix + u16 length + blob | `0x4a3a` … `0x4a3b` |
+| Trains | `0x32cd` / `0x5209` | fixed 473 B; level-1 payload `capacity × 12` | `0x520a` … `0x520b` |
+| Track | `0x32cf` / `0x38a5` | 6-byte prefix + u16 length + blob | `0x38a6` … `0x38a7` |
+| Track lines | `0x32d3` / `0x396d` | fixed 36 B (reader argument) | `0x396e` |
+
+The supplied save and both controlled saves carry these sections with zero
+records; the empty track section has a 4-byte trailer. A populated private
+fixture (`RT3_TRACK_SAVE`, British Isles, SHA-256 `2a8f6e72…`) saved after one
+month with Great Republic, a Bath–Gloucester line, one Planet 2-2-0 and four
+cars parses as **3 stations, 4 cars, 1 train, 61 track records and 5 track
+lines**, with trailers of 867, 718, 110 and 339 bytes.
+
+Record field meanings, the trailer contents and the track geometry remain
+open. The header's record-size word is 74 for track lines while the stored
+record is 36 bytes, so `rt3-kit::fixed` separates the header value from the
+stored size.
+
 ## Open
 
-- Save-specific date, company, economy, train/track and campaign fields.
+- Save-specific date, economy and campaign fields; rail record fields, the
+  trailer contents and the track geometry.
 - Meanings of the retained terrain/tile/blob fields beyond the already
   documented structural layouts.
 - Meanings of the measured company/player changed-byte offsets and other

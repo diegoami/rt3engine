@@ -10,5 +10,10 @@
   "buildings": {"section_offset": 3579183, "capacity": 430, "records": 410, "end_offset": 3989731},
   "companies": {"section_offset": 4063347, "capacity": 5, "records": 0, "end_offset": 4063492, "founded_years": [], "names": []},
   "players": {"section_offset": 4063823, "capacity": 6, "records": 4, "end_offset": 4076880, "names": ["Philip Thomas", "James Fisk", "Jay Gould", "Unassigned"]},
+  "stations": {"section_offset": 4062460, "capacity": 10, "records": 0, "end_offset": 4062546, "trailer_bytes": 0},
+  "cars": {"section_offset": 4062554, "capacity": 10, "records": 0, "end_offset": 4062644, "trailer_bytes": 0},
+  "trains": {"section_offset": 4062648, "capacity": 50, "records": 0, "end_offset": 4063339, "trailer_bytes": 0},
+  "track": {"section_offset": 4063500, "capacity": 1000, "records": 0, "end_offset": 4063718, "trailer_bytes": 4},
+  "track_lines": {"section_offset": 4063722, "capacity": 100, "records": 0, "end_offset": 4063819, "trailer_bytes": 0},
   "events": {"section_offset": 4244640, "capacity": 30, "records": 17, "end_offset": 4282475}
 }

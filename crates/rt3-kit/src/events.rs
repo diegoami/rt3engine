@@ -22,7 +22,10 @@ pub fn read(bytes: &[u8]) -> Option<EventCollection> {
             inner: 0x4e99,
             end: 0x4e9a,
             preamble: Some(1001),
-            blob_bytes: EVENT_BLOB_BYTES,
+            blob_bytes: Some(EVENT_BLOB_BYTES),
+            trailer_end: None,
+            header2: Some(10),
+            header3: Some(20),
         },
     )
 }
