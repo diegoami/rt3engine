@@ -33,8 +33,12 @@ pub fn read(bytes: &[u8]) -> Option<PlayerCollection> {
             outer: 0x32d0,
             inner: 0x5209,
             record_bytes: PLAYER_BLOB_BYTES,
+            header_record_bytes: PLAYER_BLOB_BYTES as u32,
             nominal_slots: 4,
             header_flag: Some(0),
+            max_capacity: 64,
+            end_tags: 2,
+            trailer: false,
             end: [0x520a, 0x520b],
         },
     )

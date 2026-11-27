@@ -41,6 +41,7 @@ pub mod fixed;
 pub mod map;
 pub mod pk4;
 pub mod players;
+pub mod rail;
 pub mod render;
 pub mod save;
 pub mod sparse;

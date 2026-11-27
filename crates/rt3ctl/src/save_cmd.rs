@@ -29,7 +29,7 @@ pub fn run(command: SaveInspect) -> ExitCode {
     };
     if !command.json {
         println!(
-            "{}: {} bytes, source {}, terrain {}x{}, tiles {}, cities {}, buildings {}, companies {}, players {}, events {}",
+            "{}: {} bytes, source {}, terrain {}x{}, tiles {}, cities {}, buildings {}, companies {}, players {}, events {}, stations {}, cars {}, trains {}, track {}, track lines {}",
             command.path.display(),
             save.file_bytes,
             save.source_map,
@@ -40,7 +40,12 @@ pub fn run(command: SaveInspect) -> ExitCode {
             save.buildings.records.len(),
             save.companies.records.len(),
             save.players.records.len(),
-            save.events.records.len()
+            save.events.records.len(),
+            save.stations.records.len(),
+            save.cars.records.len(),
+            save.trains.records.len(),
+            save.track.records.len(),
+            save.track_lines.records.len()
         );
         return ExitCode::SUCCESS;
     }
@@ -153,6 +158,56 @@ fn render_json(save: &SaveGame, name: &str) -> Result<String, &'static str> {
     .unwrap();
     writeln!(
         out,
+        "  \"stations\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"trailer_bytes\": {}}},",
+        save.stations.section_offset,
+        save.stations.capacity,
+        save.stations.records.len(),
+        save.stations.end_offset,
+        save.stations.trailer.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"cars\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"trailer_bytes\": {}}},",
+        save.cars.section_offset,
+        save.cars.capacity,
+        save.cars.records.len(),
+        save.cars.end_offset,
+        save.cars.trailer.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"trains\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"trailer_bytes\": {}}},",
+        save.trains.section_offset,
+        save.trains.capacity,
+        save.trains.records.len(),
+        save.trains.end_offset,
+        save.trains.trailer.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"track\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"trailer_bytes\": {}}},",
+        save.track.section_offset,
+        save.track.capacity,
+        save.track.records.len(),
+        save.track.end_offset,
+        save.track.trailer.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "  \"track_lines\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}, \"trailer_bytes\": {}}},",
+        save.track_lines.section_offset,
+        save.track_lines.capacity,
+        save.track_lines.records.len(),
+        save.track_lines.end_offset,
+        save.track_lines.trailer.len()
+    )
+    .unwrap();
+    writeln!(
+        out,
         "  \"events\": {{\"section_offset\": {}, \"capacity\": {}, \"records\": {}, \"end_offset\": {}}}",
         save.events.section_offset, save.events.capacity, save.events.records.len(), save.events.end_offset
     )
@@ -187,6 +242,11 @@ mod tests {
         let json = render_json(&save, "control.gms").unwrap();
         assert!(json.contains("Great Republic"));
         assert!(json.contains("George Hudson"));
+        assert!(json.contains("\"stations\""));
+        assert!(json.contains("\"cars\""));
+        assert!(json.contains("\"trains\""));
+        assert!(json.contains("\"track\""));
+        assert!(json.contains("\"track_lines\""));
         assert!(json.ends_with("}\n"));
     }
 

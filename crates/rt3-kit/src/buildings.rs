@@ -14,7 +14,10 @@ pub fn read(bytes: &[u8]) -> Option<BuildingCollection> {
             inner: 0x36b1,
             end: 0x36b2,
             preamble: None,
-            blob_bytes: BUILDING_BLOB_BYTES,
+            blob_bytes: Some(BUILDING_BLOB_BYTES),
+            trailer_end: None,
+            header2: Some(10),
+            header3: Some(20),
         },
     )
 }

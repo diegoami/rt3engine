@@ -6,8 +6,6 @@
 //! of eight. Mask semantics remain open; the serialized record count is the
 //! explicit active count in the header.
 
-const MAX_CAPACITY: usize = 64;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedBlobRecord {
     pub data: Vec<u8>,
@@ -18,8 +16,11 @@ pub struct FixedBlobCollection {
     pub section_offset: usize,
     pub capacity: usize,
     pub records: Vec<FixedBlobRecord>,
-    /// Offset of the first of the two collection-ending tags.
+    /// Offset of the first collection-ending tag, before any trailer.
     pub end_offset: usize,
+    /// Raw bytes between the two ending tags when the collection carries a
+    /// trailer; empty otherwise. Semantics are not inferred.
+    pub trailer: Vec<u8>,
 }
 
 #[derive(Clone, Copy)]
@@ -27,9 +28,16 @@ pub(crate) struct Spec {
     pub outer: u32,
     pub inner: u32,
     pub record_bytes: usize,
+    /// Record size written in the header; differs from the stored size for
+    /// track lines, whose reader argument is 36 but whose header says 74.
+    pub header_record_bytes: u32,
     pub nominal_slots: u32,
     /// A fixed header flag, or `None` when the company header repeats active.
     pub header_flag: Option<u32>,
+    pub max_capacity: usize,
+    /// Number of ending tags: one, or two with an optional raw trailer.
+    pub end_tags: usize,
+    pub trailer: bool,
     pub end: [u32; 2],
 }
 
@@ -49,14 +57,14 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<FixedBlob
     if u32_at(bytes, section)? != spec.outer
         || u32_at(bytes, section + 4)? != spec.inner
         || u32_at(bytes, section + 8)? != 1
-        || u32_at(bytes, section + 12)? as usize != spec.record_bytes
+        || u32_at(bytes, section + 12)? != spec.header_record_bytes
         || u32_at(bytes, section + 16)? != spec.nominal_slots
     {
         return None;
     }
     let capacity = u32_at(bytes, section + 24)? as usize;
     let active = u32_at(bytes, section + 28)? as usize;
-    if capacity > MAX_CAPACITY || active > capacity {
+    if capacity > spec.max_capacity || active > capacity {
         return None;
     }
     let header_flag = u32_at(bytes, section + 32)?;
@@ -98,14 +106,28 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<FixedBlob
         records.push(FixedBlobRecord { data });
     }
     let end_offset = off;
-    if u32_at(bytes, off)? != spec.end[0] || u32_at(bytes, off + 4)? != spec.end[1] {
+    if u32_at(bytes, off)? != spec.end[0] {
         return None;
+    }
+    let mut trailer = Vec::new();
+    if spec.end_tags != 1 {
+        if spec.trailer {
+            let start = off + 4;
+            let window = bytes.get(start..)?;
+            let limit = window.len().min(64 * 1024);
+            let end_tag = spec.end[1].to_le_bytes();
+            let pos = window[..limit].windows(4).position(|w| w == end_tag)?;
+            trailer.extend_from_slice(&window[..pos]);
+        } else if u32_at(bytes, off + 4)? != spec.end[1] {
+            return None;
+        }
     }
     Some(FixedBlobCollection {
         section_offset: section,
         capacity,
         records,
         end_offset,
+        trailer,
     })
 }
 
@@ -136,8 +158,12 @@ mod tests {
             outer: 0x32d0,
             inner: 0x5209,
             record_bytes: 3243,
+            header_record_bytes: 3243,
             nominal_slots: 4,
             header_flag: Some(0),
+            max_capacity: 64,
+            end_tags: 2,
+            trailer: false,
             end: [0x520a, 0x520b],
         };
         let mut bytes = vec![0u8; 0x3000];

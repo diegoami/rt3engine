@@ -46,8 +46,12 @@ pub fn read(bytes: &[u8]) -> Option<CompanyCollection> {
             outer: 0x32ce,
             inner: 0x61a9,
             record_bytes: COMPANY_BLOB_BYTES,
+            header_record_bytes: COMPANY_BLOB_BYTES as u32,
             nominal_slots: 5,
             header_flag: None,
+            max_capacity: 64,
+            end_tags: 2,
+            trailer: false,
             end: [0x61aa, 0x61ab],
         },
     )

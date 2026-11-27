@@ -6,6 +6,8 @@ use crate::companies::CompanyCollection;
 use crate::events::EventCollection;
 use crate::map::GmpMap;
 use crate::players::PlayerCollection;
+use crate::rail;
+use crate::sparse::SparseBlobCollection;
 use crate::terrain::{read_framed, HeightGrid};
 use crate::tiles::TileSections;
 
@@ -23,6 +25,11 @@ pub struct SaveGame {
     pub companies: CompanyCollection,
     pub players: PlayerCollection,
     pub events: EventCollection,
+    pub stations: crate::fixed::FixedBlobCollection,
+    pub cars: SparseBlobCollection,
+    pub trains: crate::fixed::FixedBlobCollection,
+    pub track: SparseBlobCollection,
+    pub track_lines: crate::fixed::FixedBlobCollection,
 }
 
 impl SaveGame {
@@ -63,6 +70,11 @@ pub fn from_bytes(bytes: &[u8]) -> Option<SaveGame> {
     let companies = crate::companies::read(bytes)?;
     let players = crate::players::read(bytes)?;
     let events = crate::events::read(bytes)?;
+    let stations = rail::stations(bytes)?;
+    let cars = rail::cars(bytes)?;
+    let trains = rail::trains(bytes)?;
+    let track = rail::track(bytes)?;
+    let track_lines = rail::track_lines(bytes)?;
     Some(SaveGame {
         file_bytes: bytes.len(),
         sha256: sha256(bytes),
@@ -74,6 +86,11 @@ pub fn from_bytes(bytes: &[u8]) -> Option<SaveGame> {
         companies,
         players,
         events,
+        stations,
+        cars,
+        trains,
+        track,
+        track_lines,
     })
 }
 
@@ -232,6 +249,11 @@ mod tests {
             Some("Unassigned")
         );
         assert_eq!(save.events.records.len(), 17);
+        assert_eq!(save.stations.records.len(), 0);
+        assert_eq!(save.cars.records.len(), 0);
+        assert_eq!(save.trains.records.len(), 0);
+        assert_eq!(save.track.records.len(), 0);
+        assert_eq!(save.track_lines.records.len(), 0);
         assert_eq!(
             save.sha256_hex(),
             "3c11cbbdde844273c499086a8a4c23df9e1cfe9837910696fa13bf32d121d99b"
@@ -270,9 +292,40 @@ mod tests {
             Some("George Hudson")
         );
         assert_eq!(save.events.records.len(), 39);
+        assert_eq!(save.stations.records.len(), 0);
+        assert_eq!(save.cars.records.len(), 0);
+        assert_eq!(save.trains.records.len(), 0);
+        assert_eq!(save.track.records.len(), 0);
+        assert_eq!(save.track_lines.records.len(), 0);
         assert_eq!(
             save.sha256_hex(),
             "f892bc28ea1fb3bb1ff60f3ed443e82de7818d3fd7a7c26a93e974cfb69ac6bc"
+        );
+    }
+
+    #[test]
+    fn reads_populated_track_save() {
+        let Some(path) = fixture("RT3_TRACK_SAVE") else {
+            eprintln!("RT3_TRACK_SAVE unset; skipping populated track-save check");
+            return;
+        };
+        let bytes = fs::read(path).unwrap();
+        let save = from_bytes(&bytes).expect("populated track save");
+        assert_eq!(save.source_map, "British Isles.gmp");
+        assert_eq!(save.companies.records.len(), 3);
+        assert_eq!(save.stations.records.len(), 3);
+        assert_eq!(save.cars.records.len(), 4);
+        assert_eq!(save.trains.records.len(), 1);
+        assert_eq!(save.track.records.len(), 61);
+        assert_eq!(save.track_lines.records.len(), 5);
+        assert_eq!(save.stations.trailer.len(), 867);
+        assert_eq!(save.cars.trailer.len(), 718);
+        assert_eq!(save.trains.trailer.len(), 110);
+        assert_eq!(save.track.trailer.len(), 339);
+        assert!(save.track_lines.trailer.is_empty());
+        assert_eq!(
+            save.sha256_hex(),
+            "2a8f6e723fffcdd7cf9d82fbcc5e9f5b309918108687f8ae985093803830a27a"
         );
     }
 }

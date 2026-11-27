@@ -11,7 +11,9 @@ installation reachable through the Windows mount.
 - `RT3_SAVE` optionally names one owner-supplied original `.gmc` save fixture;
   `RT3_CONTROL_SAVE` optionally names the first independently generated `.gms`
   control fixture; `RT3_CONTROL_SAVE_2` optionally names the second for the
-  differential producer. Both are read-only inputs to their inventory/diff
+  differential producer; `RT3_TRACK_SAVE` optionally names a save from a run
+  with built track and at least one train, used only by the rail-section
+  check. Both are read-only inputs to their inventory/diff
   producers and tests, normally in the gitignored working area. Save bytes
   never enter Git. CI self-skips them when unset, just as install-backed
   checks self-skip without `RT3_HOME`.

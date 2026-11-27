@@ -23,7 +23,11 @@ pub struct SparseBlobCollection {
     pub section_offset: usize,
     pub capacity: usize,
     pub records: Vec<SparseBlobRecord>,
+    /// Offset of the first ending tag, before any trailer.
     pub end_offset: usize,
+    /// Raw bytes between the two ending tags when the collection carries a
+    /// trailer; empty otherwise. Semantics are not inferred.
+    pub trailer: Vec<u8>,
 }
 
 #[derive(Clone, Copy)]
@@ -32,7 +36,13 @@ pub(crate) struct Spec {
     pub inner: u32,
     pub end: u32,
     pub preamble: Option<u32>,
-    pub blob_bytes: usize,
+    /// Expected blob length, or `None` to accept each record's own length.
+    pub blob_bytes: Option<usize>,
+    /// A second ending tag that follows a raw trailer block.
+    pub trailer_end: Option<u32>,
+    /// Optional fixed header words after the `0, 6` prefix.
+    pub header2: Option<u32>,
+    pub header3: Option<u32>,
 }
 
 fn u32_at(bytes: &[u8], off: usize) -> Option<u32> {
@@ -61,8 +71,12 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
     }
     if u32_at(bytes, header)? != 0
         || u32_at(bytes, header + 4)? != 6
-        || u32_at(bytes, header + 8)? != 10
-        || u32_at(bytes, header + 12)? != 20
+        || spec
+            .header2
+            .is_some_and(|value| u32_at(bytes, header + 8) != Some(value))
+        || spec
+            .header3
+            .is_some_and(|value| u32_at(bytes, header + 12) != Some(value))
         || u32_at(bytes, header + 24)? != 0
     {
         return None;
@@ -106,8 +120,10 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
         }
         let prefix = take(bytes, &mut off, 6)?.try_into().ok()?;
         let len = u16::from_le_bytes(take(bytes, &mut off, 2)?.try_into().ok()?) as usize;
-        if len != spec.blob_bytes {
-            return None;
+        if let Some(expected) = spec.blob_bytes {
+            if len != expected {
+                return None;
+            }
         }
         let raw = take(bytes, &mut off, len)?;
         let mut data = Vec::new();
@@ -118,11 +134,22 @@ fn parse_candidate(bytes: &[u8], section: usize, spec: Spec) -> Option<SparseBlo
     if records.len() != active || u32_at(bytes, off)? != spec.end {
         return None;
     }
+    let end_offset = off;
+    let mut trailer = Vec::new();
+    if let Some(end_tag) = spec.trailer_end {
+        let start = off.checked_add(4)?;
+        let window = bytes.get(start..)?;
+        let limit = window.len().min(64 * 1024);
+        let tag = end_tag.to_le_bytes();
+        let pos = window[..limit].windows(4).position(|w| w == tag)?;
+        trailer.extend_from_slice(&window[..pos]);
+    }
     Some(SparseBlobCollection {
         section_offset: section,
         capacity,
         records,
-        end_offset: off,
+        end_offset,
+        trailer,
     })
 }
 
@@ -174,7 +201,10 @@ mod tests {
             inner: 0x4e99,
             end: 0x4e9a,
             preamble: Some(1001),
-            blob_bytes: 4,
+            blob_bytes: Some(4),
+            trailer_end: None,
+            header2: Some(10),
+            header3: Some(20),
         }
     }
 
@@ -283,7 +313,10 @@ mod tests {
             inner: 0x4e99,
             end: 0x4e9a,
             preamble: None,
-            blob_bytes: 4,
+            blob_bytes: Some(4),
+            trailer_end: None,
+            header2: Some(10),
+            header3: Some(20),
         };
         let mut bytes = vec![0u8; 0x3000];
         push_u32(&mut bytes, spec.outer);
