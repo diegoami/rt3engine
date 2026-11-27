@@ -100,6 +100,10 @@ fn compares_the_controlled_save_and_names_divergences() {
     assert!(text.status.success(), "text compare failed");
     let text = String::from_utf8(text.stdout).expect("text is UTF-8");
     assert!(text.contains("divergences:"), "text output: {text}");
+    assert!(
+        text.contains("terrain 321x513 / 321x513"),
+        "terrain order: {text}"
+    );
 
     // A cross-map pair reaches the terrain, city-count and source-map
     // branches that the same-map pair above never fires, and all seven
@@ -126,6 +130,10 @@ fn compares_the_controlled_save_and_names_divergences() {
         .map(|item| item.as_str().expect("divergence is a string"))
         .collect();
     assert_eq!(divergences.len(), 7, "{divergences:?}");
+    assert!(
+        divergences.contains(&"terrain dimensions differ: map 257x257, save 321x513"),
+        "terrain divergence order: {divergences:?}"
+    );
     for needle in [
         "terrain dimensions differ",
         "city record counts differ",

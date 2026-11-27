@@ -407,7 +407,7 @@ pub fn run_compare(compare: SimCompare) -> ExitCode {
     if world.terrain.rows != saved.terrain.rows || world.terrain.cols != saved.terrain.cols {
         divergences.push(format!(
             "terrain dimensions differ: map {}x{}, save {}x{}",
-            world.terrain.rows, world.terrain.cols, saved.terrain.rows, saved.terrain.cols
+            world.terrain.cols, world.terrain.rows, saved.terrain.cols, saved.terrain.rows
         ));
     }
     if map_cities != save_cities {
@@ -462,10 +462,10 @@ pub fn run_compare(compare: SimCompare) -> ExitCode {
         println!("{} vs {save_name}", world.map_name);
         println!(
             "terrain {}x{} / {}x{}; cities {map_cities} / {save_cities}; buildings {map_buildings} / {save_buildings}; companies 0 / {save_companies}; cargo {cargo_types}",
-            world.terrain.rows,
             world.terrain.cols,
-            saved.terrain.rows,
-            saved.terrain.cols
+            world.terrain.rows,
+            saved.terrain.cols,
+            saved.terrain.rows
         );
         println!("divergences:");
         for divergence in &divergences {
