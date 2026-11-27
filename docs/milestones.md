@@ -80,6 +80,71 @@ recovered.
 **Gate:** C1–C5 met on the candidate, including the deterministic multi-year
 run on two maps and the documented divergence.
 
+## Milestone 6 — trains, track and commands (scope proposed 2026-11-27)
+
+**Promise:** a headless rail layer over loaded original maps — the decoded
+track and consist structures feed a declared planar track graph; a consist
+moves on fixed ticks under a documented movement model; stations, consists and
+schedules are executed; headless player commands carry an order log and
+checkpoints; a scripted company reaches positive cash flow while a declared
+AI competitor v0 operates on the same scenario; replay is byte-identical and
+every declared rule and divergence is documented.
+
+Claims, each naming the check that proves it:
+
+- **C1 — Track graph decoder.** Over the five rail readers landed as prior
+  baseline (PR #63, not claimed here), decode the track piece-origin field and
+  build a planar graph with a declared connectivity rule: split where the
+  origin step exceeds 100 units, then join run ends within one piece length.
+  The claim is the graph decoder and its measured origin field; it does **not**
+  claim a station-to-path link, and matching the path ends to station records
+  remains open in #62. Check: graph tests on `RT3_TRACK_SAVE` and a committed
+  synthetic graph, with the measured origins and the declared rule in
+  `docs/evidence/rail-v1.md`. Connectivity is a declared model, not a
+  recovered game semantic; the piece orientation/endpoint fields remain open.
+- **C2 — Consist movement on the graph.** A consist moves along the graph at a
+  documented speed and acceleration model on fixed ticks, with positions
+  bounded by the path and a golden state hash. The same inputs replay
+  byte-identically, and a different seed changes the state only where the
+  model declares randomness. Check: engine tests on a committed synthetic
+  graph and a private-fixture run that emits one state line per tick.
+- **C3 — Stations, consists and schedules.** A consist is assembled from the
+  typed engine and car catalogue, a schedule is built between two station-DB
+  records, and the run stops at each station in order. Check: engine tests on
+  the synthetic graph for stop order and a golden schedule dump, plus the
+  fixture run from C2.
+- **C4 — Headless commands, order log and checkpoints.** `rt3ctl sim` gains
+  commands to build a declared track between two station records, buy a train
+  and assign a schedule. Every command is recorded in an order log with
+  checkpoints, and replaying the log reproduces a byte-identical state. Check:
+  CLI integration tests for the command path, the order log and checkpoint
+  resume, and a replay comparison by SHA-256.
+- **C5 — Scripted company cash flow.** On the private fixture's decoded track
+  (not a claimed station link), a scripted company runs the fixture's Planet
+  2-2-0 consist under the declared economy, earns revenue and pays operating
+  costs, and reaches positive cash flow within a bounded run. The revenue and
+  cost rules and every divergence from measurable original state are listed in
+  `docs/evidence/rail-economy-v1.md`. Check: an install-backed scripted run
+  plus `rt3ctl` output and the evidence table.
+- **C6 — AI competitor v0.** One declared competitor company operates in the
+  C5 scenario under a fixed scripted policy (the declared v0 rule), with
+  deterministic behavior and no recovered original AI. Check: the joint C5
+  run with the competitor active, a replay hash, and the declared policy and
+  its divergences in `docs/evidence/rail-economy-v1.md`.
+
+**Not in this release:** original track geometry and physics constants,
+original train performance or schedule data, AI competitor behavior beyond the
+declared v0 policy, signalling, company finance beyond the scripted model,
+buildable stations or industry changes, the observer (milestone 7),
+original-save entry (milestone 8), the client (milestone 9), MCP surfaces
+(milestones 11–12), original save writing (milestone 13), campaign breadth,
+bit-exact original fidelity, and any original constant reverse engineering has
+not recovered.
+
+**Gate:** C1–C6 met on the candidate, including the scripted company's positive
+cash flow in the joint run with the AI competitor v0 active, and byte-identical
+command-log replay.
+
 ## Selection and completion rules
 
 1. Work proceeds milestone by milestone in the order above unless the owner
