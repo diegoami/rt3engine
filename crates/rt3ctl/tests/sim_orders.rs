@@ -7,7 +7,15 @@ use std::process::{Command, Output};
 
 use serde_json::Value;
 
+use engine::orders::{DeclaredTrack, OrderState};
+use engine::schedule::Station;
+use rt3_kit::save::sha256;
+
 const FINAL_HASH: &str = "9c526411bf691fbedc5f756d9d302ff271489f6593c57caf2c7fb56f0829a23c";
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
 
 fn exe() -> &'static str {
     env!("CARGO_BIN_EXE_rt3ctl")
@@ -428,6 +436,64 @@ fn a_log_checkpoint_mismatch_is_rejected_without_appending() {
     );
     assert!(
         String::from_utf8_lossy(&replay.stderr).contains("prefix does not match"),
+        "unexpected error: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
+    fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn replay_rejects_a_checkpoint_with_an_impossible_track() {
+    let root = dir("bad-checkpoint");
+    let checkpoint = root.join("checkpoint.json");
+    let log = root.join("orders.jsonl");
+    fs::write(&log, b"").expect("empty log");
+
+    let state = OrderState {
+        stations: vec![
+            Station {
+                slot: 0,
+                label: "Bath".to_string(),
+            },
+            Station {
+                slot: 1,
+                label: "Gloucester".to_string(),
+            },
+        ],
+        track: Some(DeclaredTrack::new(0, 99, 120.0).expect("declared track")),
+        consist: None,
+        schedule: None,
+    };
+    let value = serde_json::json!({
+        "version": 1,
+        "seq": 0,
+        "log_sha256": hex(&sha256(b"")),
+        "state_sha256": hex(&state.state_digest()),
+        "state": {
+            "stations": [[0, "Bath"], [1, "Gloucester"]],
+            "track": {"from": 0, "to": 99, "length": 120.0},
+            "consist": null,
+            "schedule": null,
+        },
+    });
+    fs::write(&checkpoint, format!("{value}\n")).expect("checkpoint");
+
+    let replay = ctl(&[
+        "sim",
+        "replay",
+        "--checkpoint",
+        &path_string(&checkpoint),
+        "--log",
+        &path_string(&log),
+        "--json",
+    ]);
+    assert!(
+        !replay.status.success(),
+        "a checkpoint with a missing track endpoint must be rejected"
+    );
+    assert!(
+        String::from_utf8_lossy(&replay.stderr).contains("missing station slot 99"),
         "unexpected error: {}",
         String::from_utf8_lossy(&replay.stderr)
     );
