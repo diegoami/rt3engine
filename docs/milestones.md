@@ -80,6 +80,62 @@ recovered.
 **Gate:** C1–C5 met on the candidate, including the deterministic multi-year
 run on two maps and the documented divergence.
 
+## Milestone 6 — trains, track and commands (scope proposed 2026-11-27)
+
+**Promise:** a headless rail layer over loaded original maps — decoded track,
+station and consist structures feed a declared planar track graph; a consist
+moves on fixed ticks under a documented movement model; stations, consists and
+schedules are executed; headless player commands carry an order log and
+checkpoints; a scripted company reaches positive cash flow; replay is
+byte-identical and every declared rule and divergence is documented.
+
+Claims, each naming the check that proves it:
+
+- **C1 — Rail structures and a declared track graph.** The five rail sections
+  parse structurally, and the populated private fixture's 61 track records
+  yield a single Bath–Gloucester path under a declared connectivity rule:
+  split where the decoded piece-origin step exceeds 100 units, then join run
+  ends within one piece length. The station collection reports Bath, Gloucester
+  and the service tower. Check: the `rt3-kit::rail` tests on
+  `RT3_TRACK_SAVE`, a committed synthetic graph test, and the measured layout
+  in `docs/evidence/rail-v1.md`. Connectivity is a declared model, not a
+  recovered game semantic; the piece orientation/endpoint fields remain open.
+- **C2 — Consist movement on the graph.** A consist moves along the graph at a
+  documented speed and acceleration model on fixed ticks, with positions
+  bounded by the path and a golden state hash. The same inputs replay
+  byte-identically, and a different seed changes the state only where the
+  model declares randomness. Check: engine tests on a committed synthetic
+  graph and a private-fixture run that emits one state line per tick.
+- **C3 — Stations, consists and schedules.** A consist is assembled from the
+  typed engine and car catalogue, a schedule is built between two station-DB
+  records, and the run stops at each station in order. Check: engine tests on
+  the synthetic graph for stop order and a golden schedule dump, plus the
+  fixture run from C2.
+- **C4 — Headless commands, order log and checkpoints.** `rt3ctl sim` gains
+  commands to build a declared track between two station records, buy a train
+  and assign a schedule. Every command is recorded in an order log with
+  checkpoints, and replaying the log reproduces a byte-identical state. Check:
+  CLI integration tests for the command path, the order log and checkpoint
+  resume, and a replay comparison by SHA-256.
+- **C5 — Scripted company cash flow.** On the private fixture line a scripted
+  company uses the Bath–Gloucester track, runs the Planet 2-2-0 with its cars
+  under the declared economy, earns revenue and pays operating costs, and
+  reaches positive cash flow within a bounded run. The revenue and cost rules
+  and every divergence from measurable original state are listed in
+  `docs/evidence/rail-economy-v1.md`. Check: an install-backed scripted run
+  plus `rt3ctl` output and the evidence table.
+
+**Not in this release:** original track geometry and physics constants,
+original train performance or schedule data, AI companies and competitor
+behavior, signalling, company finance beyond the scripted model, buildable
+stations or industry changes, the observer (milestone 7), original-save entry
+(milestone 8), the client (milestone 9), MCP surfaces (milestones 11–12),
+original save writing (milestone 13), campaign breadth, bit-exact original
+fidelity, and any original constant reverse engineering has not recovered.
+
+**Gate:** C1–C5 met on the candidate, including the scripted company's positive
+cash flow and byte-identical command-log replay.
+
 ## Selection and completion rules
 
 1. Work proceeds milestone by milestone in the order above unless the owner
