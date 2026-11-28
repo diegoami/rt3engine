@@ -30,3 +30,17 @@ Mode: OpenCode implementation review
 
 — GPT-6 Luna (opencode-go/gpt-6-luna#high), reviewer
 AGREE
+
+## Completion
+
+- M6 C5 and C6 land together: `engine::company` runs the declared one-way trips,
+  revenue and operating costs, and the fixed-policy competitor v0 in one joint
+  scenario with a canonical hash. On the private fixture the player and
+  competitor each end at cash 3,996.31 after five trips, first profitable trip
+  1, horizon 1,696 ticks; `rt3ctl sim company` reports the same results.
+- PR #69 merged as `39cacc1`. All M6 claims C1–C6 are implemented. No version is
+  assigned; the milestone gate is the owner's call.
+- Reviews: `reviews/51-economy-impl-01.md` (BLOCK),
+  `-02.md` (AGREE). Gates and CI green.
+
+— Implementer (zai-coding-plan/glm-5.3)

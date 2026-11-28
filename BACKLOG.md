@@ -42,8 +42,10 @@ compensates for absent engine mechanics.
    `docs/milestones.md` (claims C1–C6 including the AI competitor v0). C1, the
    declared track graph, is landed (PR #65), C2, declared consist movement
    over it, is landed (PR #66), C3, stations/consists/schedules, is landed
-   (PR #67), and C4, headless orders with an order log and checkpoints, is
-   landed (PR #68); C5 is next. The rail field decode remains open in
+   (PR #67), C4, headless orders with an order log and checkpoints, is landed
+   (PR #68), and C5/C6, the scripted company cash flow and competitor v0, is
+   landed (PR #69). All M6 claims C1–C6 are implemented; the milestone gate and
+   version are the owner's call. The rail field decode remains open in
    [#62](https://github.com/diegoami/rt3engine/issues/62).
 3. The prior-art survey [#3](https://github.com/diegoami/rt3engine/issues/3) is
    closed by the 2026-11-25 web/forum survey recorded in
