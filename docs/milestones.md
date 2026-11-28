@@ -120,12 +120,16 @@ Claims, each naming the check that proves it:
   CLI integration tests for the command path, the order log and checkpoint
   resume, and a replay comparison by SHA-256.
 - **C5 — Scripted company cash flow.** On the private fixture's decoded track
-  (not a claimed station link), a scripted company runs the fixture's Planet
-  2-2-0 consist under the declared economy, earns revenue and pays operating
-  costs, and reaches positive cash flow within a bounded run. The revenue and
-  cost rules and every divergence from measurable original state are listed in
+  (not a claimed station link), a scripted company runs the installation
+  catalogue's `PlanetL` consist (the first four typed car records) under the
+  declared economy, earns revenue and pays operating costs, and reaches
+  positive cash flow within a bounded run. The revenue and cost rules and
+  every divergence from measurable original state are listed in
   `docs/evidence/rail-economy-v1.md`. Check: an install-backed scripted run
-  plus `rt3ctl` output and the evidence table.
+  whose `rt3ctl` output names the consist, plus the cash figures and the
+  evidence table. Corrected 2026-11-28: the earlier wording said the fixture's
+  Planet 2-2-0 consist; the fixture's car-to-type assignment is not decoded,
+  so the run uses the declared catalogue consist.
 - **C6 — AI competitor v0.** One declared competitor company operates in the
   C5 scenario under a fixed scripted policy (the declared v0 rule), with
   deterministic behavior and no recovered original AI. Check: the joint C5

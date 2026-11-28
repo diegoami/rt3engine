@@ -165,6 +165,10 @@ fn run_company(run: CompanyRun) -> Result<(), String> {
             json!({
                 "player": company_json(&joint.player),
                 "competitor": company_json(&joint.competitor),
+                "consist": {
+                    "locomotive": &consist.locomotive,
+                    "cars": &consist.cars,
+                },
                 "rules": {
                     "fare_per_car_trip": joint.rules.fare_per_car_trip,
                     "cost_per_tick": joint.rules.cost_per_tick,
@@ -182,6 +186,11 @@ fn run_company(run: CompanyRun) -> Result<(), String> {
             })
         );
     } else {
+        println!(
+            "consist {} ({} cars)",
+            consist.locomotive,
+            consist.car_count()
+        );
         println!(
             "player cash {:.2} (revenue {:.2}, costs {:.2}, {} trips), competitor cash {:.2}, \
              horizon {} ticks",

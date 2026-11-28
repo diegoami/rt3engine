@@ -44,6 +44,10 @@ fn fixture_company_is_positive_and_replays() {
         String::from_utf8_lossy(&first.stderr)
     );
     let value: Value = serde_json::from_slice(&first.stdout).expect("company JSON");
+    assert_eq!(value["consist"]["locomotive"], "PlanetL");
+    let cars = value["consist"]["cars"].as_array().expect("consist cars");
+    let names: Vec<&str> = cars.iter().filter_map(Value::as_str).collect();
+    assert_eq!(names, vec!["242 A1", "242 A1", "2-D-2", "E-88"]);
     let player_cash = value["player"]["cash"].as_f64().expect("player cash");
     assert!(player_cash > 0.0, "player cash must be positive: {value}");
     assert_eq!(value["player_positive"], true);
