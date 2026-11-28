@@ -25,6 +25,9 @@ The C5 scenario uses the populated fixture's declared track and stations and
 the typed `PlanetL` consist (first four catalogue car display names `242 A1`,
 `242 A1`, `2-D-2`, `E-88`), with the default 5-tick origin dwell.
 
+A run is rejected if computed revenue, costs or cash is non-finite, or if the
+competitor's trip or horizon tick arithmetic is not representable in `u64`.
+
 ## Competitor v0 (C6)
 
 One declared competitor company runs the same path, schedule, consist and

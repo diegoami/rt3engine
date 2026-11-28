@@ -93,14 +93,21 @@ impl Company {
         }
     }
 
-    fn apply(&mut self, trip: TripFigures, trip_number: u64) {
-        self.revenue += trip.revenue;
-        self.costs += trip.costs;
-        self.cash = self.cash + trip.revenue - trip.costs;
+    fn apply(&mut self, trip: TripFigures, trip_number: u64) -> bool {
+        let revenue = self.revenue + trip.revenue;
+        let costs = self.costs + trip.costs;
+        let cash = self.cash + trip.revenue - trip.costs;
+        if !(revenue.is_finite() && costs.is_finite() && cash.is_finite()) {
+            return false;
+        }
+        self.revenue = revenue;
+        self.costs = costs;
+        self.cash = cash;
         self.trips += 1;
         if self.cash > 0.0 && self.first_profitable_trip.is_none() {
             self.first_profitable_trip = Some(trip_number);
         }
+        true
     }
 }
 
@@ -146,18 +153,22 @@ impl JointRun {
         let mut player = Company::new("player", rules.initial_cash);
         let mut player_end = 0u64;
         for trip_number in 1..=trips_per_company {
-            player.apply(trip, trip_number);
-            player_end += trip.ticks;
+            if !player.apply(trip, trip_number) {
+                return None;
+            }
+            player_end = player_end.checked_add(trip.ticks)?;
         }
 
         let mut competitor = Company::new("competitor", rules.initial_cash);
         let mut horizon = player_end;
         for trip_index in 0..trips_per_company {
-            let start = policy
-                .start_tick
-                .saturating_add(trip_index.saturating_mul(policy.interval_ticks));
-            horizon = horizon.max(start.saturating_add(trip.ticks));
-            competitor.apply(trip, trip_index + 1);
+            let start = trip_index
+                .checked_mul(policy.interval_ticks)?
+                .checked_add(policy.start_tick)?;
+            horizon = horizon.max(start.checked_add(trip.ticks)?);
+            if !competitor.apply(trip, trip_index + 1) {
+                return None;
+            }
         }
 
         Some(JointRun {
@@ -223,6 +234,9 @@ fn run_trip(
     let distance = train.movement.path.length();
     let revenue = rules.fare_per_car_trip * consist.car_count() as f64;
     let costs = rules.cost_per_tick * ticks as f64 + rules.cost_per_unit * distance;
+    if !revenue.is_finite() || !costs.is_finite() {
+        return None;
+    }
     Some(TripFigures {
         ticks,
         revenue,

@@ -179,4 +179,41 @@ fn rejects_invalid_company_inputs() {
     let mut wrong = schedule.clone();
     wrong.stops[1].distance = path.length() - 1.0;
     assert!(JointRun::run(&consist(), &path, &wrong, rules, 1, policy).is_none());
+
+    assert!(JointRun::run(
+        &consist(),
+        &path,
+        &schedule,
+        CompanyRules {
+            fare_per_car_trip: f64::MAX,
+            ..rules
+        },
+        1,
+        policy
+    )
+    .is_none());
+    assert!(JointRun::run(
+        &consist(),
+        &path,
+        &schedule,
+        CompanyRules {
+            cost_per_tick: f64::MAX,
+            ..rules
+        },
+        1,
+        policy
+    )
+    .is_none());
+    assert!(JointRun::run(
+        &consist(),
+        &path,
+        &schedule,
+        rules,
+        1,
+        CompetitorPolicy {
+            start_tick: u64::MAX,
+            interval_ticks: 1,
+        }
+    )
+    .is_none());
 }

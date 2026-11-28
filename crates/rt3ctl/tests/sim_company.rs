@@ -44,15 +44,17 @@ fn fixture_company_is_positive_and_replays() {
         String::from_utf8_lossy(&first.stderr)
     );
     let value: Value = serde_json::from_slice(&first.stdout).expect("company JSON");
+    let player_cash = value["player"]["cash"].as_f64().expect("player cash");
+    assert!(player_cash > 0.0, "player cash must be positive: {value}");
+    assert_eq!(value["player_positive"], true);
     assert_eq!(value["player"]["trips"], 5);
     assert_eq!(value["competitor"]["trips"], 5);
+    assert_eq!(
+        value["competitor"]["cash"].as_f64().expect("cash"),
+        player_cash
+    );
     assert_eq!(value["player"]["first_profitable_trip"], 1);
     assert_eq!(value["competitor"]["first_profitable_trip"], 1);
-    assert_eq!(value["player_positive"], true);
-    assert!(
-        value["player"]["cash"].as_f64().expect("cash") > 0.0,
-        "player cash must be positive: {value}"
-    );
     assert_eq!(value["player"]["revenue"], 5000.0);
     assert_eq!(value["horizon_ticks"], 1696);
     assert_eq!(value["rules"]["fare_per_car_trip"], 250.0);
