@@ -14,6 +14,7 @@
 //! The installation root resolves from `--path`, else `RT3_HOME`. The
 //! installation is treated read-only.
 
+mod company_cmd;
 mod inventory;
 mod map_cmd;
 mod orders_cmd;
@@ -42,6 +43,7 @@ Usage:
   rt3ctl sim buy-train --checkpoint <file> --log <file> --locomotive <name> [--car <name>]...
   rt3ctl sim assign-schedule --checkpoint <file> --log <file> [--dwell <ticks>]
   rt3ctl sim replay --checkpoint <file> --log <file> [--json]
+  rt3ctl sim company --track-save <file> [--path <install-root>] [--trips <n>] [--dwell <ticks>] [--competitor-start <tick>] [--competitor-interval <ticks>] [--json]
   rt3ctl save inspect --path <save-file> [--json]
   rt3ctl save diff --path-a <first-save> --path-b <second-save> [--json]
   rt3ctl --help
@@ -62,6 +64,7 @@ enum Command {
     SimInit(orders_cmd::Init),
     SimOrder(orders_cmd::OrderCommand),
     SimReplay(orders_cmd::Replay),
+    SimCompany(company_cmd::CompanyRun),
     SaveInspect(save_cmd::SaveInspect),
     SaveDiff(save_diff::SaveDiff),
     Help,
@@ -176,9 +179,10 @@ fn parse_args(args: &[String]) -> Result<Command, String> {
                 Ok(Command::SimOrder(orders_cmd::parse_assign_schedule(it)?))
             }
             Some("replay") => Ok(Command::SimReplay(orders_cmd::parse_replay(it)?)),
+            Some("company") => Ok(Command::SimCompany(company_cmd::parse(it)?)),
             Some("--help") | Some("help") | None => Err(
                 "sim needs a subcommand: inspect, run, compare, init, build-track, buy-train, \
-                 assign-schedule, replay"
+                 assign-schedule, replay, company"
                     .to_string(),
             ),
             Some(other) => Err(format!("unknown sim subcommand: {other}")),
@@ -314,6 +318,7 @@ fn main() -> ExitCode {
         Command::SimInit(i) => orders_cmd::run_init(i),
         Command::SimOrder(o) => orders_cmd::run_order(o),
         Command::SimReplay(r) => orders_cmd::run_replay(r),
+        Command::SimCompany(c) => company_cmd::run(c),
         Command::SaveInspect(s) => save_cmd::run(s),
         Command::SaveDiff(s) => save_diff::run(s),
     }

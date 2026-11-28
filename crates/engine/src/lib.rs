@@ -17,9 +17,11 @@
 //! city and building records, cargo catalogue), `economy` (declared fixed-tick
 //! cargo supply, demand and prices), `movement` (declared consist motion on
 //! the decoded track graph), `schedule` (consists, station references and
-//! scheduled stops) and `orders` (declared headless player commands and their
-//! canonical state).
+//! scheduled stops), `orders` (declared headless player commands and their
+//! canonical state) and `company` (scripted company finance and the declared
+//! competitor v0).
 
+pub mod company;
 pub mod economy;
 pub mod movement;
 pub mod orders;
